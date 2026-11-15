@@ -66,9 +66,9 @@ window.MMCarte = (function () {
       {color: '#7FB3D5', weight: 1.8, opacity: .85, dashArray: '5 4', interactive: false}), conf: {}};
     couches.itineraire.obj.addTo(carte);
 
-    ligne(surc, 'over', 'itineraire', 'Itinéraire retenu', true, '#AFF2FA')
+    ligne(surc, 'over', 'itineraire', 'Planned route', true, '#AFF2FA')
       .addEventListener('change', function (e) { basculer('itineraire', e.target.checked); MM.retour('bascule'); });
-    ligne(surc, 'over', 'curiosity', 'Traces de Curiosity · ' + M.waypoints_curiosity.n + ' pts', false, '#7FB3D5')
+    ligne(surc, 'over', 'curiosity', 'Curiosity traverse · ' + M.waypoints_curiosity.n + ' pts', false, '#7FB3D5')
       .addEventListener('change', function (e) { basculer('curiosity', e.target.checked); MM.retour('bascule'); });
 
     // points de mission
@@ -86,7 +86,7 @@ window.MMCarte = (function () {
     });
 
     marqueur = L.circleMarker([M.habitat.lat, M.habitat.lon], {
-      radius: 7, color: '#03171C', weight: 2.5, fillColor: '#2FD0E6', fillOpacity: 1,
+      radius: 8, color: '#FFFFFF', weight: 3, fillColor: '#2FD0E6', fillOpacity: 1,
       className: 'marqueur-marche', interactive: false});
 
     $('#opacite').addEventListener('input', function (e) {
@@ -127,35 +127,35 @@ window.MMCarte = (function () {
     $('#m-site').textContent = M.site.nom;
 
     var cases = [
-      [fr(s.longueur_km, 2) + '<span class="unite"> km</span>', 'Distance (boucle)'],
-      [MM.duree(s.temps_prudent_min), 'Marche · ' + fr(s.temps_ref_min) + ' min sans combinaison'],
-      ['+' + fr(s.denivele_m) + '<span class="unite"> m</span>', 'Dénivelé positif'],
-      [fr(s.pente_max, 1) + '<span class="unite">°</span>', 'Pente maximale · ' + fr(s.prudence_pct) + ' % en prudence'],
-      [fr(s.dose_msv, 3) + '<span class="unite"> mSv</span>', 'Dose reçue sur la sortie'],
-      [fr(M.cibles.length), 'Cibles · une crête, un creux']
+      [fr(s.longueur_km, 2) + '<span class="unite"> km</span>', 'Distance (loop)'],
+      [MM.duree(s.temps_prudent_min), 'Walk · ' + fr(s.temps_ref_min) + ' min without a suit'],
+      ['+' + fr(s.denivele_m) + '<span class="unite"> m</span>', 'Elevation gain'],
+      [fr(s.pente_max, 1) + '<span class="unite">°</span>', 'Max slope · ' + fr(s.prudence_pct) + ' % in caution'],
+      [fr(s.dose_msv, 3) + '<span class="unite"> mSv</span>', 'Dose over the EVA'],
+      [fr(M.cibles.length), 'Targets · one ridge, one trough']
     ];
     $('#bilan').innerHTML = cases.map(function (c) {
       return '<div><div class="v data">' + c[0] + '</div><div class="l">' + c[1] + '</div></div>';
     }).join('');
 
     $('#hypotheses').innerHTML =
-      'Hypothèses : vitesse en combinaison × ' + fr(s.facteur_prudent, 1) + ' de la règle de Tobler · ' +
-      'seuils de pente ' + fr(M.seuils.prudence_deg) + '° / ' + fr(M.seuils.interdit_deg) + '° · ' +
-      'dose RAD ' + fr(s.dose_jour, 2) + ' mSv/jour · lissage du relief ' +
-      fr(M.seuils.lissage_pente_m) + ' m (calé sur 73 relevés de Curiosity).';
+      'Assumptions: suited walking speed × ' + fr(s.facteur_prudent, 1) + " of Tobler's hiking rule · " +
+      'slope thresholds ' + fr(M.seuils.prudence_deg) + '° / ' + fr(M.seuils.interdit_deg) + '° · ' +
+      'RAD dose ' + fr(s.dose_jour, 2) + ' mSv/day · terrain smoothing ' +
+      fr(M.seuils.lissage_pente_m) + ' m (calibrated on 73 Curiosity measurements).';
 
     var cible = function (n) { return M.cibles.filter(function (c) { return c.nom === n; })[0]; };
     var rangs = [{nature: 'habitat', nom: M.habitat.nom, num: '◆',
-      det: 'Départ · ' + fr(M.habitat.alt_m, 0) + ' m · relevé Curiosity sol ' + M.habitat.sol_curiosity,
+      det: 'Start · ' + fr(M.habitat.alt_m, 0) + ' m · Curiosity position, sol ' + M.habitat.sol_curiosity,
       sci: ''}];
     M.etapes.forEach(function (e, k) {
       var c = cible(e.arrivee);
       rangs.push({
         nature: c ? c.nature : 'habitat', nom: e.arrivee, num: k + 1,
         det: fr(e.distance_m) + ' m · ' + MM.duree(e.temps_prudent_min) + ' · D+ ' +
-             fr(e.denivele_pos_m) + ' m · pente max ' + fr(e.pente_max, 1) + '°',
-        sci: c ? c.science + ' · relevé ' + fr(c.duree_arret_min) + ' min'
-               : 'Fin de sortie — remontée dans le rover pressurisé'
+             fr(e.denivele_pos_m) + ' m · max slope ' + fr(e.pente_max, 1) + '°',
+        sci: c ? c.science + ' · sampling ' + fr(c.duree_arret_min) + ' min'
+               : 'End of EVA — back into the pressurized rover'
       });
     });
     $('#etapes').innerHTML = rangs.map(function (r, k) {
@@ -254,6 +254,57 @@ window.MMCarte = (function () {
       if (!carte.hasLayer(marqueur)) marqueur.addTo(carte);
     },
     suivre: function (lon, lat) { if (carte) carte.panTo([lat, lon], {animate: true, duration: .4}); },
+    // garde le marcheur dans le cadre sans secouer la carte : on ne recadre
+    // que lorsqu'il approche du bord (marge de 25 %)
+    garderEnVue: function (lon, lat) {
+      if (!carte || carte._panAnim && carte._panAnim._inProgress) return;
+      if (!carte.getBounds().pad(-0.25).contains([lat, lon])) carte.panTo([lat, lon], {animate: true, duration: .9});
+    },
+    // trace déjà parcourue : l'itinéraire jusqu'à la position s (m)
+    parcouru: function (s) {
+      if (!carte) return;
+      var D = IT.distance_cum_m, C = IT.coordinates, pts = [];
+      for (var i = 0; i < D.length && D[i] <= s; i++) pts.push([C[i][1], C[i][0]]);
+      var j = Math.min(pts.length, D.length - 1);
+      if (pts.length && j > 0 && D[j] > D[j - 1]) {
+        var f = (s - D[j - 1]) / (D[j] - D[j - 1]);
+        pts.push([C[j - 1][1] + (C[j][1] - C[j - 1][1]) * f, C[j - 1][0] + (C[j][0] - C[j - 1][0]) * f]);
+      }
+      if (!couches.parcouru) {
+        couches.parcouru = {
+          halo: L.polyline([], {color: '#02080A', weight: 10, opacity: .55, interactive: false}).addTo(carte),
+          trait: L.polyline([], {color: '#FFFFFF', weight: 4.5, opacity: 1, interactive: false}).addTo(carte)
+        };
+      }
+      couches.parcouru.halo.setLatLngs(pts);
+      couches.parcouru.trait.setLatLngs(pts);
+      if (marqueur && carte.hasLayer(marqueur)) marqueur.bringToFront();
+    },
+    surGlisser: function (f) { if (carte) carte.on('dragstart', f); },
+    // zones signalées depuis l'orbite : cercle rouge, liseré net
+    zones: function (liste) {
+      if (!carte) return;
+      if (couches.zones) carte.removeLayer(couches.zones);
+      couches.zones = L.layerGroup((liste || []).map(function (z) {
+        return L.circle([z.lat, z.lon], {radius: z.r, color: '#FF4D4F', weight: 2, dashArray: '6 5',
+          fillColor: '#FF4D4F', fillOpacity: .18, interactive: false});
+      })).addTo(carte);
+    },
+    // pose d'une zone : le prochain clic sur la carte donne le centre
+    poserZone: function (surPose) {
+      if (!carte) return;
+      document.body.classList.add('pose-zone');
+      var annuler = function (ev) { if (ev.key === 'Escape') fin(null); };
+      function fin(ll) {
+        document.body.classList.remove('pose-zone');
+        carte.off('click', clic);
+        document.removeEventListener('keydown', annuler);
+        surPose(ll);
+      }
+      function clic(e) { fin(e.latlng); }
+      carte.once('click', clic);
+      document.addEventListener('keydown', annuler);
+    },
     viserEtape: viserEtape,
     profil: profil,
     niveau: niveau,

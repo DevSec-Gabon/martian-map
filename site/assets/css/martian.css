@@ -6,10 +6,11 @@
 
    Principes retenus, et pourquoi :
 
-   1. VERRE GRIS.  Les surfaces sont des plaques de verre translucide tirées de
-      la palette fournie (gris neutre #6E6F71 → #FFFFFF). Le verre se pose sur
-      l'imagerie martienne : l'instrument n'occulte jamais complètement le
-      terrain, exactement comme une visière.
+   1. VERRE GRIS.  Les surfaces sont des plaques de verre fumé tirées de la
+      palette fournie (gris neutre #6E6F71 → #FFFFFF). La lisibilité ne vient
+      pas d'un fond noir opaque mais du verre lui-même : il floute, teinte en gris
+      ce qu'il recouvre (teinte grise + désaturation). Le terrain reste visible
+      à travers, l'élément mis en avant devient le centre d'intérêt.
    2. ACCENT FROID.  Le terrain de Gale est rouille. Un accent chaud s'y noie.
       L'accent instrument est donc cyan : contraste maximal sur la roche, et
       lecture immédiate de « ceci est une donnée, pas du paysage ».
@@ -32,16 +33,23 @@
   --g-40:#C0C0C2; --g-50:#A8A8AB; --g-60:#909094; --g-70:#6E6F71;
 
   /* --- verre --- */
-  --verre-1:rgba(255,255,255,.045);
-  --verre-2:rgba(255,255,255,.075);
-  --verre-3:rgba(255,255,255,.115);
-  --verre-bord:rgba(255,255,255,.135);
-  --verre-bord-fort:rgba(255,255,255,.26);
-  --verre-ombre:0 24px 60px -24px rgba(0,0,0,.92);
-  --flou:blur(22px) saturate(150%);
+  --verre-1:rgba(255,255,255,.05);
+  --verre-2:rgba(255,255,255,.085);
+  --verre-3:rgba(255,255,255,.13);
+  --verre-bord:rgba(255,255,255,.16);
+  --verre-bord-fort:rgba(255,255,255,.32);
+  --verre-ombre:0 24px 60px -24px rgba(0,0,0,.85);
+  --flou:blur(24px) saturate(150%);
+  /* verre fumé gris : la plaque floute ET assombrit ce qu'elle recouvre */
+  --verre-fume:linear-gradient(155deg,rgba(120,122,126,.5),rgba(70,72,76,.56) 45%,rgba(38,40,44,.66));
+  --flou-fume:blur(26px) saturate(40%);
+
+  /* --- surfaces claires (écran d'accès) --- */
+  --clair-txt:#14171A; --clair-txt-2:#4A5056; --clair-txt-3:#7A8086;
+  --clair-verre:rgba(255,255,255,.52); --clair-bord:rgba(255,255,255,.75);
 
   /* --- texte --- */
-  --txt:#F2F4F6; --txt-2:#B4BBC2; --txt-3:#79828B; --txt-4:#4D5760;
+  --txt:#F5F7F9; --txt-2:#D3D8DD; --txt-3:#A9B1B9; --txt-4:#858E97;
 
   /* --- accent instrument --- */
   --cy-200:#AFF2FA; --cy-300:#6FE2F2; --cy-400:#2FD0E6;
@@ -68,7 +76,7 @@
 html,body{height:100%;margin:0}
 body{
   background:var(--ink-900); color:var(--txt);
-  font:400 16px/1.5 var(--police-ui);
+  font:400 17px/1.5 var(--police-ui);
   -webkit-font-smoothing:antialiased; text-rendering:optimizeLegibility;
   overflow:hidden;
 }
@@ -89,8 +97,8 @@ a{color:var(--cy-300);text-decoration:none}
    =========================================================================== */
 .verre{
   position:relative;
-  background:linear-gradient(158deg,var(--verre-3),var(--verre-1) 58%,rgba(255,255,255,.02));
-  backdrop-filter:var(--flou); -webkit-backdrop-filter:var(--flou);
+  background:var(--verre-fume);
+  backdrop-filter:var(--flou-fume); -webkit-backdrop-filter:var(--flou-fume);
   border:1px solid var(--verre-bord);
   border-radius:var(--r-m);
   box-shadow:var(--verre-ombre);
@@ -113,20 +121,35 @@ a{color:var(--cy-300);text-decoration:none}
 }
 .verre-plat{box-shadow:none;border-radius:var(--r-s)}
 @supports not (backdrop-filter:blur(2px)){
-  .verre{background:rgba(14,19,24,.93)}
+  .verre{background:rgba(40,42,46,.94)}
 }
+
+/* clic : une onde part du point touché — chaque action se voit */
+.onde{position:absolute;border-radius:50%;pointer-events:none;transform:scale(0);
+  background:radial-gradient(circle,rgba(255,255,255,.45),rgba(255,255,255,0) 70%);
+  animation:onde .55s var(--e) forwards}
+@keyframes onde{to{transform:scale(1);opacity:0}}
+.btn,.segments button,.role,.etape{position:relative;overflow:hidden}
+
+/* logo NASA mis en avant : pastille blanche qui garde l'insigne intact */
+.nasa{display:inline-flex;align-items:center;gap:10px}
+/* « NASA » en texte : le règlement du concours interdit l'insigne. Simple
+   mention de source, dans la typographie du produit. */
+.nasa-mot{font-family:var(--police-titre);font-weight:700;letter-spacing:.16em;line-height:1}
+.lockup{display:flex;align-items:center;gap:14px}
+.lockup .x{width:1px;align-self:stretch;background:var(--verre-bord-fort);margin:4px 0}
 
 /* ===========================================================================
    TYPOGRAPHIE
    =========================================================================== */
-.titre-xl{font-family:var(--police-titre);font-size:clamp(30px,3.4vw,44px);font-weight:700;line-height:1.05;letter-spacing:-.025em}
+.titre-xl{font-family:var(--police-titre);font-size:clamp(34px,3.8vw,52px);font-weight:700;line-height:1.05;letter-spacing:-.025em}
 .titre-l {font-family:var(--police-titre);font-size:23px;font-weight:600;line-height:1.15}
 .titre-m {font-family:var(--police-titre);font-size:18px;font-weight:600}
 
 /* étiquette technique : toujours en capitales, toujours espacée, jamais une phrase */
 .etiq{
-  font-family:var(--police-ui); font-size:10.5px; font-weight:600;
-  letter-spacing:.17em; text-transform:uppercase; color:var(--txt-3);
+  font-family:var(--police-ui); font-size:11.5px; font-weight:600;
+  letter-spacing:.15em; text-transform:uppercase; color:var(--txt-3);
 }
 .etiq-cy{color:var(--cy-400)}
 .data{font-family:var(--police-data);font-variant-numeric:tabular-nums;font-feature-settings:"tnum" 1}
@@ -146,7 +169,7 @@ a{color:var(--cy-300);text-decoration:none}
 .btn{
   display:inline-flex;align-items:center;justify-content:center;gap:10px;
   padding:13px 20px;border-radius:var(--r-s);
-  font-weight:600;font-size:14.5px;letter-spacing:.01em;
+  font-weight:600;font-size:15.5px;letter-spacing:.01em;
   border:1px solid var(--verre-bord); background:var(--verre-2); color:var(--txt);
   transition:background var(--t-court) var(--e),border-color var(--t-court) var(--e),
              transform var(--t-court) var(--e),box-shadow var(--t-court) var(--e);
@@ -162,7 +185,7 @@ a{color:var(--cy-300);text-decoration:none}
 .btn-cle:hover{background:linear-gradient(140deg,var(--cy-300),var(--cy-500));border-color:transparent}
 .btn-fant{background:transparent;border-color:transparent;color:var(--txt-2);padding:9px 12px}
 .btn-fant:hover{background:var(--verre-2);color:var(--txt)}
-.btn-min{padding:7px 11px;font-size:12.5px;border-radius:8px}
+.btn-min{padding:8px 12px;font-size:13.5px;border-radius:9px}
 .btn[aria-pressed=true],.btn.on{
   background:linear-gradient(140deg,rgba(47,208,230,.26),rgba(47,208,230,.1));
   border-color:rgba(47,208,230,.5);color:var(--cy-200);
@@ -171,7 +194,7 @@ a{color:var(--cy-300);text-decoration:none}
 
 /* interrupteur de segment (2D | 3D, rôles…) */
 .segments{display:inline-flex;padding:4px;gap:3px;border-radius:12px;background:rgba(0,0,0,.34);border:1px solid var(--verre-bord)}
-.segments button{padding:7px 14px;border-radius:9px;font-size:13px;font-weight:600;color:var(--txt-3);
+.segments button{padding:8px 15px;border-radius:9px;font-size:14px;font-weight:600;color:var(--txt-3);
   transition:all var(--t-court) var(--e)}
 .segments button:hover{color:var(--txt)}
 .segments button[aria-selected=true]{background:var(--verre-3);color:var(--txt);box-shadow:0 1px 0 var(--verre-bord-fort) inset}
@@ -206,7 +229,7 @@ a{color:var(--cy-300);text-decoration:none}
 /* case à cocher de couche */
 .ligne-couche{
   display:flex;align-items:center;gap:11px;padding:8px 10px;border-radius:9px;cursor:pointer;
-  transition:background var(--t-court) var(--e);font-size:14px;
+  transition:background var(--t-court) var(--e);font-size:15px;
 }
 .ligne-couche:hover{background:var(--verre-2)}
 .ligne-couche input{position:absolute;opacity:0;pointer-events:none}
@@ -235,7 +258,7 @@ input[type=range]:focus-visible::-webkit-slider-thumb{box-shadow:0 0 0 7px rgba(
    =========================================================================== */
 .marque{display:flex;align-items:center;gap:11px}
 .marque img{height:26px;width:auto;display:block}
-.marque-txt{font-family:var(--police-titre);font-weight:700;font-size:15.5px;letter-spacing:.2em;line-height:1}
+.marque-txt{font-family:var(--police-titre);font-weight:700;font-size:16.5px;letter-spacing:.2em;line-height:1}
 .marque-txt b{color:var(--cy-400);font-weight:700}
 .marque-sous{font-size:10.5px;letter-spacing:.13em;color:var(--txt-3);text-transform:uppercase;margin-top:3px}
 

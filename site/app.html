@@ -1,12 +1,13 @@
 <!doctype html>
-<html lang="fr">
+<html lang="en">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Martian Map — sortie 01</title>
+<title>Martian Map — EVA 01</title>
 <link rel="icon" href="assets/img/devsec-mark.png">
 <link rel="stylesheet" href="assets/vendor/leaflet/leaflet.css">
-<link rel="stylesheet" href="assets/css/martian.css">
+<link rel="stylesheet" href="assets/css/martian.css?v=8">
+<script type="importmap">{"imports":{"three":"./assets/vendor/three.module.min.js"}}</script>
 <style>
 /* ===========================================================================
    Disposition : la scène (carte 2D ou terrain 3D) occupe TOUTE la fenêtre.
@@ -32,22 +33,25 @@ body[data-vue="3d"] #carte,body[data-ecran="marche"] #carte{opacity:0;pointer-ev
 
 /* ---------------------------------------------------------------- barre haute */
 #barre{position:fixed;top:0;left:0;right:0;z-index:40;display:flex;align-items:center;gap:18px;
-  padding:11px 18px;background:linear-gradient(180deg,rgba(7,10,12,.92),rgba(7,10,12,.62) 70%,transparent);
-  backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px)}
+  padding:11px 18px;background:linear-gradient(180deg,rgba(30,32,35,.72),rgba(30,32,35,.38) 75%,transparent);
+  backdrop-filter:blur(14px) saturate(50%);-webkit-backdrop-filter:blur(14px) saturate(50%)}
+.nasa-barre{display:flex;align-items:center;gap:9px;padding-left:16px;border-left:1px solid var(--verre-bord)}
+.nasa-barre span:not(.nasa-mot){font-size:10.5px;font-weight:600;letter-spacing:.14em;text-transform:uppercase;color:var(--txt-2);line-height:1.2}
 #barre .sep{width:1px;height:26px;background:var(--verre-bord)}
-.mission-nom{font-size:13px;font-weight:600;line-height:1.2}
-.mission-sous{font-size:10.5px;color:var(--txt-3)}
+.mission-nom{font-size:14.5px;font-weight:600;line-height:1.2}
+.mission-sous{font-size:12px;color:var(--txt-2)}
 .droite{margin-left:auto;display:flex;align-items:center;gap:10px}
 .poste{display:flex;align-items:center;gap:9px;padding:7px 12px;border-radius:9px;
   background:var(--verre-2);border:1px solid var(--verre-bord)}
-.poste .n{font-size:12.5px;font-weight:600;line-height:1.1}
-.poste .r{font-size:10px;color:var(--cy-400);letter-spacing:.1em;text-transform:uppercase}
+.poste .n{font-size:13.5px;font-weight:600;line-height:1.1}
+.poste .r{font-size:10.5px;color:var(--cy-300);letter-spacing:.1em;text-transform:uppercase}
+.poste svg{color:var(--cy-300);flex:none}
 
 /* ---------------------------------------------------------------- panneaux */
 .panneau{position:fixed;z-index:30;display:flex;flex-direction:column;
-  background:linear-gradient(158deg,rgba(17,24,31,.9),rgba(9,13,17,.87));
-  backdrop-filter:blur(26px) saturate(135%);-webkit-backdrop-filter:blur(26px) saturate(135%);
-  box-shadow:0 28px 64px -26px rgba(0,0,0,.95)}
+  background:var(--verre-fume);
+  backdrop-filter:var(--flou-fume);-webkit-backdrop-filter:var(--flou-fume);
+  box-shadow:0 28px 64px -26px rgba(0,0,0,.9)}
 .p-tete{display:flex;align-items:center;gap:10px;padding:13px 15px 11px}
 .p-tete .etiq{flex:1}
 .p-corps{padding:0 15px 15px;overflow-y:auto;min-height:0}
@@ -60,9 +64,9 @@ body[data-vue="3d"] #carte,body[data-ecran="marche"] #carte{opacity:0;pointer-ev
 .panneau.ferme .repli svg{transform:rotate(180deg)}
 
 #p-couches{top:70px;left:18px;width:268px;max-height:calc(100vh - 220px)}
-#p-mission{top:70px;right:18px;bottom:272px;width:376px}
-#p-conditions{bottom:18px;left:18px;width:calc(100% - 430px);max-width:860px}
-#p-comms{bottom:18px;right:18px;width:376px;height:240px}
+#p-mission{top:70px;right:18px;bottom:362px;width:390px}
+#p-conditions{bottom:18px;left:18px;width:calc(100% - 446px);max-width:860px}
+#p-comms{bottom:18px;right:18px;width:390px;height:330px}
 body[data-ecran="marche"] .panneau{opacity:0;pointer-events:none;transform:translateY(8px)}
 body[data-ecran="marche"] [data-hors-marche]{opacity:0;pointer-events:none;
   transition:opacity var(--t-moyen) var(--e)}
@@ -73,17 +77,17 @@ body.plein #p-mission,body.plein #p-conditions,body.plein #p-comms,body.plein #p
 /* --- couches --- */
 .groupe + .groupe{margin-top:12px;padding-top:12px;border-top:1px solid var(--verre-bord)}
 .legende{margin-top:12px;padding-top:11px;border-top:1px solid var(--verre-bord);display:grid;gap:5px}
-.legende div{display:flex;align-items:center;gap:8px;font-size:11.5px;color:var(--txt-3)}
+.legende div{display:flex;align-items:center;gap:8px;font-size:12.5px;color:var(--txt-3)}
 .opacite{display:flex;align-items:center;gap:10px;margin-top:10px;font-size:11.5px;color:var(--txt-3)}
 .opacite input{flex:1}
 
 /* --- bilan de mission --- */
 .bilan{display:grid;grid-template-columns:1fr 1fr;gap:1px;background:var(--verre-bord);
   border:1px solid var(--verre-bord);border-radius:var(--r-s);overflow:hidden;margin-bottom:13px}
-.bilan > div{background:rgba(10,14,18,.6);padding:11px 12px}
-.bilan .v{font-family:var(--police-titre);font-size:20px;font-weight:700;letter-spacing:-.02em;line-height:1.05}
+.bilan > div{background:rgba(20,22,25,.42);padding:12px 13px}
+.bilan .v{font-family:var(--police-titre);font-size:23px;font-weight:700;letter-spacing:-.02em;line-height:1.05}
 .bilan .v .unite{font-size:12px}
-.bilan .l{font-size:10px;letter-spacing:.11em;text-transform:uppercase;color:var(--txt-3);margin-top:5px}
+.bilan .l{font-size:11px;letter-spacing:.11em;text-transform:uppercase;color:var(--txt-3);margin-top:5px}
 
 #profil{width:100%;height:92px;display:block;margin:4px 0 2px;cursor:crosshair}
 
@@ -97,30 +101,54 @@ body.plein #p-mission,body.plein #p-conditions,body.plein #p-comms,body.plein #p
 .etape[data-nature=habitat] .num{background:rgba(255,255,255,.9);color:#070A0C;border-color:transparent}
 .etape[data-nature="crête"] .num{background:linear-gradient(140deg,var(--cy-400),var(--cy-600));color:#03171C;border-color:transparent}
 .etape[data-nature=creux] .num{background:linear-gradient(140deg,#6FA8FF,#2D63C8);color:#03101C;border-color:transparent}
-.etape .nom{display:block;font-size:14px;font-weight:600;line-height:1.25}
-.etape .det{display:block;font-size:11px;color:var(--txt-3);margin-top:4px;font-family:var(--police-data);
+.etape .nom{display:block;font-size:15.5px;font-weight:600;line-height:1.25}
+.etape .det{display:block;font-size:12px;color:var(--txt-3);margin-top:4px;font-family:var(--police-data);
   line-height:1.5}
-.etape .sci{display:block;font-size:11.5px;color:var(--cy-300);margin-top:5px;line-height:1.4}
+.etape .sci{display:block;font-size:12.5px;color:var(--cy-300);margin-top:5px;line-height:1.4}
 
 /* --- conditions --- */
 .mesures{display:flex;flex-wrap:wrap;gap:9px;padding-bottom:2px}
-.mesure{flex:1 0 136px;padding:9px 11px;border-radius:9px;background:rgba(10,14,18,.55);
+.mesure{flex:1 0 140px;padding:10px 12px;border-radius:10px;background:rgba(20,22,25,.4);
   border:1px solid var(--verre-bord)}
-.mesure .n{font-size:9.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--txt-4)}
-.mesure .v{font-family:var(--police-data);font-size:14.5px;font-weight:500;margin:3px 0 2px}
-.mesure .d{font-size:10px;color:var(--txt-4);line-height:1.3}
+.mesure .n{font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--txt-4)}
+.mesure .v{font-family:var(--police-data);font-size:16px;font-weight:500;margin:3px 0 2px}
+.mesure .d{font-size:11px;color:var(--txt-4);line-height:1.3}
 
 /* --- liaison --- */
 #fil{display:flex;flex-direction:column;gap:7px;overflow-y:auto;flex:1;min-height:0;margin-bottom:11px}
-.msg-l{padding:9px 11px;border-radius:9px;background:rgba(10,14,18,.55);border:1px solid var(--verre-bord);
-  font-size:12.5px;line-height:1.4}
+.msg-l{padding:10px 12px;border-radius:11px;background:rgba(20,22,25,.45);border:1px solid var(--verre-bord);
+  font-size:13.5px;line-height:1.42;animation:entre var(--t-moyen) var(--e) both}
+.msg-l[data-moi]{margin-left:22px;background:rgba(47,208,230,.07);border-color:rgba(47,208,230,.22)}
+.msg-l .acc{display:block;margin-top:5px;font-size:11px;color:var(--txt-3);font-family:var(--police-data)}
+.msg-l .acc.ok{color:var(--cy-300)}
+.msg-l .zone-l{display:inline-flex;align-items:center;gap:5px;margin-top:6px;font-size:11.5px;color:#FF9C9D}
+.composer{display:flex;gap:7px;margin-bottom:9px}
+.composer input{flex:1;min-width:0;padding:10px 12px;border-radius:10px;border:1px solid var(--verre-bord);
+  background:rgba(0,0,0,.28);outline:0;font-size:14px}
+.composer input:focus{border-color:var(--cy-500);box-shadow:0 0 0 3px rgba(47,208,230,.14)}
+.composer select{padding:0 8px;border-radius:10px;border:1px solid var(--verre-bord);background:rgba(0,0,0,.28);font-size:12.5px}
+.composer select option{background:#1d2024}
+#suivi{display:none;align-items:center;gap:10px;padding:9px 11px;margin-bottom:9px;border-radius:11px;
+  background:rgba(47,208,230,.08);border:1px solid rgba(47,208,230,.25);font-size:12.5px}
+#suivi.vu{display:flex}
+#suivi .data{color:var(--cy-200)}
+#suivi .h{margin-left:auto;color:var(--txt-3);font-size:11px}
+#suivi #suivi-auto{padding:4px 9px;font-size:11.5px;flex:none}
+#suivi .puce-etat{--c:var(--txt-4)}
+#suivi.en-marche .puce-etat{--c:var(--cy-400)}
+body.pose-zone #carte{cursor:crosshair}
+.zone-carte{fill:url(#hachures)}
 .msg-l .e{display:flex;align-items:center;gap:7px;margin-bottom:4px}
 .msg-l .qui{font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--txt-3)}
 .msg-l .h{margin-left:auto;font-family:var(--police-data);font-size:10px;color:var(--txt-4)}
 .msg-l[data-prio=danger]{border-color:rgba(255,77,79,.45);background:rgba(255,77,79,.09)}
 .msg-l[data-prio=prudence]{border-color:rgba(255,176,32,.4);background:rgba(255,176,32,.07)}
-.envois{display:flex;flex-wrap:wrap;gap:6px}
-.envois .btn{padding:7px 10px;font-size:11.5px;border-radius:8px;font-weight:500}
+.envois{display:flex;flex-wrap:nowrap;gap:6px;overflow-x:auto;padding-bottom:4px;flex:none;scrollbar-width:thin}
+.envois .btn{flex:none;white-space:nowrap}
+#fil{min-height:70px}
+.envois .btn{padding:7px 10px;font-size:12.5px;border-radius:9px;font-weight:500}
+.envois .btn[data-prio=danger]{border-color:rgba(255,77,79,.4)}
+.envois .btn[data-prio=prudence]{border-color:rgba(255,176,32,.35)}
 .vide{font-size:12px;color:var(--txt-4);padding:12px 2px;text-align:center}
 
 /* ===========================================================================
@@ -136,8 +164,8 @@ body[data-ecran="marche"] #hud{opacity:1;pointer-events:auto}
   background:radial-gradient(ellipse 72% 64% at 50% 48%,transparent 52%,rgba(0,0,0,.62) 100%)}
 
 /* bande de cap, en haut : fine, à la limite du champ de vision */
-#ruban{top:72px;left:50%;transform:translateX(-50%);width:min(620px,56vw);height:42px;
-  background:linear-gradient(180deg,rgba(9,13,17,.8),rgba(9,13,17,.55));
+#ruban{top:72px;left:50%;transform:translateX(-50%);width:min(620px,56vw);height:44px;
+  background:var(--verre-fume);
   border-radius:12px;overflow:hidden;display:grid;place-items:center}
 #ruban canvas{display:block;width:100%;height:100%}
 #ruban .fleche{position:absolute;top:-6px;left:50%;transform:translateX(-50%);
@@ -148,17 +176,17 @@ body[data-ecran="marche"] #hud{opacity:1;pointer-events:auto}
 #hud-g{left:26px;top:132px}
 #hud-d{right:26px;top:132px;align-items:stretch}
 .bloc{padding:15px 17px;border-radius:var(--r-m);
-  background:linear-gradient(158deg,rgba(17,24,31,.84),rgba(9,13,17,.8));
-  backdrop-filter:blur(22px) saturate(135%);-webkit-backdrop-filter:blur(22px) saturate(135%)}
-.bloc .l{font-size:10px;letter-spacing:.15em;text-transform:uppercase;color:var(--txt-3);margin-bottom:7px}
+  background:var(--verre-fume);
+  backdrop-filter:var(--flou-fume);-webkit-backdrop-filter:var(--flou-fume)}
+.bloc .l{font-size:11px;letter-spacing:.15em;text-transform:uppercase;color:var(--txt-3);margin-bottom:7px}
 .bloc .g{font-family:var(--police-titre);font-weight:700;letter-spacing:-.03em;line-height:.95;
   font-variant-numeric:tabular-nums}
 .bloc .g .unite{font-size:.42em;letter-spacing:0}
 
-#b-prochain .nom{font-family:var(--police-titre);font-size:21px;font-weight:600;line-height:1.1}
-#b-prochain .sci{font-size:11.5px;color:var(--cy-300);margin-top:5px;line-height:1.35}
-#b-dist .g{font-size:60px}
-#b-temps .g{font-size:36px}
+#b-prochain .nom{font-family:var(--police-titre);font-size:23px;font-weight:600;line-height:1.1}
+#b-prochain .sci{font-size:12.5px;color:var(--cy-300);margin-top:5px;line-height:1.35}
+#b-dist .g{font-size:64px}
+#b-temps .g{font-size:40px}
 #b-pente{border:1.5px solid var(--sur);background:linear-gradient(150deg,rgba(86,204,138,.14),rgba(86,204,138,.04))}
 #b-pente .l{color:var(--sur)}
 #b-pente .g{font-size:46px}
@@ -185,11 +213,32 @@ body[data-ecran="marche"] #hud{opacity:1;pointer-events:auto}
   background:linear-gradient(180deg,rgba(255,77,79,.85),transparent)}
 #boussole3d .cadre{position:absolute;inset:0;border-radius:50%;pointer-events:none;
   box-shadow:0 0 0 1.5px rgba(255,255,255,.14) inset}
-#boussole-etiq{left:26px;bottom:6px;width:230px;text-align:center}
+#boussole-etiq{left:26px;bottom:2px;width:230px;display:flex;flex-direction:column;align-items:center;gap:7px}
+#mini-etiq{font-size:11.5px;letter-spacing:.1em}
+#boussole3d[data-etat=prudence] .plateau{box-shadow:0 0 0 2px var(--prudence),0 24px 50px -16px rgba(0,0,0,.9)}
+#boussole3d[data-etat=danger] .plateau{box-shadow:0 0 0 3px var(--danger),0 0 40px -6px rgba(255,77,79,.6),0 24px 50px -16px rgba(0,0,0,.9)}
+#radar-ctl{display:flex;gap:6px;align-items:center}
+#radar-ctl .segments{padding:3px}#radar-ctl .segments button{padding:4px 10px;font-size:12px}
+#radar-portee{padding:5px 9px;font-size:12px}
+/* liaison dans la visière : bas-centre, hors du champ utile */
+#h-liaison{left:0;right:0;margin:0 auto;bottom:26px;width:min(440px,calc(100vw - 920px));min-width:300px;padding:11px 14px;
+  border-radius:var(--r-m);display:none}
+#h-liaison.vu{display:block;animation:tombe var(--t-moyen) var(--e) both}
+#h-liaison[data-prio=danger]{border-color:rgba(255,77,79,.6);box-shadow:0 0 0 1px rgba(255,77,79,.4),0 20px 50px -20px rgba(255,77,79,.5)}
+#h-liaison[data-prio=prudence]{border-color:rgba(255,176,32,.55)}
+#h-liaison .e{display:flex;align-items:center;gap:8px;margin-bottom:4px}
+#h-liaison .t{font-size:14px;line-height:1.4;margin-bottom:9px}
+#h-liaison .rep{display:flex;gap:6px}
+#h-liaison .rep .btn{flex:1;padding:7px 8px;font-size:12.5px}
+#h-liaison .rep kbd{font-family:var(--police-data);font-size:10.5px;color:var(--txt-3);margin-right:2px}
+body.sur-cible-on #h-liaison{bottom:200px}
 
 /* contrôles de démonstration */
-#hud-cmd{right:26px;bottom:26px;width:360px;padding:13px 15px;border-radius:var(--r-m);
-  background:linear-gradient(158deg,rgba(17,24,31,.86),rgba(9,13,17,.82))}
+#hud-cmd{right:26px;bottom:26px;width:380px;padding:13px 15px;border-radius:var(--r-m)}
+.allure{display:flex;align-items:center;gap:8px;margin-bottom:10px;font-size:12px;color:var(--txt-3)}
+.allure .segments{margin-left:auto;padding:3px}
+.allure .segments button{padding:5px 10px;font-size:12.5px}
+.allure .data{color:var(--txt-2)}
 .cmd-l{display:flex;align-items:center;gap:8px;margin-bottom:10px}
 .cmd-l .btn{flex:none}
 #barre-prog{height:5px;border-radius:5px;background:rgba(255,255,255,.1);overflow:hidden;margin-bottom:9px}
@@ -247,9 +296,9 @@ body[data-ecran="marche"] #hud{opacity:1;pointer-events:auto}
 @keyframes glisse{0%{transform:translateX(-100%)}100%{transform:translateX(430%)}}
 
 @media (max-width:1280px){
-  #p-mission{width:330px}#p-comms{width:330px;height:214px}
-  #p-mission{bottom:246px}
-  #p-conditions{width:calc(100% - 384px)}
+  #p-mission{width:340px}#p-comms{width:340px;height:300px}
+  #p-mission{bottom:332px}
+  #p-conditions{width:calc(100% - 396px)}
   .colonne{width:250px}#b-dist .g{font-size:48px}
 }
 @media (max-width:1000px){
@@ -266,7 +315,7 @@ body[data-ecran="marche"] #hud{opacity:1;pointer-events:auto}
   <div style="text-align:center">
     <img src="assets/img/devsec-mark.png" alt="" style="height:52px;opacity:.9">
     <div class="marque-txt" style="margin-top:16px">MARTIAN<b>MAP</b></div>
-    <div class="etiq" style="margin-top:9px" id="ch-txt">Chargement du relevé</div>
+    <div class="etiq" style="margin-top:9px" id="ch-txt">Loading survey</div>
     <div class="barre-ch"><i></i></div>
   </div>
 </div>
@@ -282,34 +331,35 @@ body[data-ecran="marche"] #hud{opacity:1;pointer-events:auto}
     <img src="assets/img/devsec-mark.png" alt="DEVSEC" style="height:30px">
     <div>
       <div class="marque-txt" style="font-size:13.5px">MARTIAN<b>MAP</b></div>
-      <div class="marque-sous" style="font-size:9.5px">par DEVSEC</div>
+      <div class="marque-sous" style="font-size:10px">by DEVSEC</div>
     </div>
+    <div class="nasa-barre"><span class="nasa-mot" style="font-size:16px;color:var(--txt)">NASA</span><span>Open<br>data</span></div>
   </div>
   <div class="sep"></div>
   <div>
-    <div class="mission-nom" id="m-nom">Sortie 01</div>
-    <div class="mission-sous" id="m-site">Mont Sharp</div>
+    <div class="mission-nom" id="m-nom">EVA 01</div>
+    <div class="mission-sous" id="m-site">Mount Sharp</div>
   </div>
 
   <div class="segments" role="tablist" style="margin-left:26px">
-    <button role="tab" data-ecran="plan" aria-selected="true">Planification</button>
-    <button role="tab" data-ecran="marche" aria-selected="false" id="ong-marche">Mode marche</button>
+    <button role="tab" data-ecran="plan" aria-selected="true">Planning</button>
+    <button role="tab" data-ecran="marche" aria-selected="false" id="ong-marche">Walk mode</button>
   </div>
 
   <div class="droite">
     <div class="segments" id="vues" data-hors-marche>
-      <button data-vue="2d" aria-selected="true" class="cy">Carte 2D</button>
-      <button data-vue="3d" aria-selected="false" class="cy">Terrain 3D</button>
+      <button data-vue="2d" aria-selected="true" class="cy">2D map</button>
+      <button data-vue="3d" aria-selected="false" class="cy">3D terrain</button>
     </div>
-    <button class="btn btn-fant btn-min" id="b-son" aria-pressed="true" title="Sons de l'interface">
+    <button class="btn btn-fant btn-min" id="b-son" aria-pressed="true" title="Interface sounds">
       <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M11 5 6.5 9H3v6h3.5L11 19Z"/><path d="M15.5 9.5a3.5 3.5 0 0 1 0 5" class="o1"/><path d="M18.5 7a7 7 0 0 1 0 10" class="o2"/></svg>
     </button>
     <div class="poste">
-      <span class="puce-etat etat pulsation" style="--c:var(--sur);border:0;padding:0"></span>
-      <div><div class="n" id="p-nom">Rover</div><div class="r" id="p-lieu">surface</div></div>
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" id="p-ic"><circle cx="12" cy="8" r="3.6"/><path d="M4.5 20c.7-3.8 3.8-6 7.5-6s6.8 2.2 7.5 6"/></svg>
+      <div><div class="n" id="p-nom">Surface</div><div class="r" id="p-lieu">surface</div></div>
     </div>
-    <button class="btn btn-fant btn-min" id="b-sortie" title="Fermer la session">
-      <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M15 17v2a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h7a2 2 0 0 1 2 2v2M10 12h10m0 0-3-3m3 3-3 3"/></svg>
+    <button class="btn btn-fant btn-min" id="b-sortie" title="Change station">
+      <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h15m0 0-3-3m3 3-3 3M20 17H5m0 0 3-3m-3 3 3 3"/></svg>
     </button>
   </div>
 </header>
@@ -317,42 +367,42 @@ body[data-ecran="marche"] #hud{opacity:1;pointer-events:auto}
 <!-- ============================ PLANIFICATION ============================ -->
 <aside class="panneau verre" id="p-couches">
   <div class="p-tete">
-    <span class="etiq">Couches</span>
-    <button class="repli" data-repli title="Replier"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 15 6-6 6 6"/></svg></button>
+    <span class="etiq">Layers</span>
+    <button class="repli" data-repli title="Collapse"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 15 6-6 6 6"/></svg></button>
   </div>
   <div class="p-corps">
-    <div class="groupe"><span class="etiq" style="display:block;margin-bottom:5px">Fond</span><div id="fonds"></div></div>
-    <div class="groupe"><span class="etiq" style="display:block;margin-bottom:5px">Superpositions</span><div id="surcouches"></div>
-      <div class="opacite"><span>Opacité</span><input type="range" id="opacite" min="10" max="100" value="100"><span class="data" id="opacite-v">100%</span></div>
+    <div class="groupe"><span class="etiq" style="display:block;margin-bottom:5px">Base map</span><div id="fonds"></div></div>
+    <div class="groupe"><span class="etiq" style="display:block;margin-bottom:5px">Overlays</span><div id="surcouches"></div>
+      <div class="opacite"><span>Opacity</span><input type="range" id="opacite" min="10" max="100" value="100"><span class="data" id="opacite-v">100%</span></div>
     </div>
     <div class="legende">
-      <div><span class="pastille" style="background:#3CB44B"></span>Pente &lt; 10° — marche normale</div>
-      <div><span class="pastille" style="background:#E0A33C"></span>10° à 20° — prudence</div>
-      <div><span class="pastille" style="background:#B5462A"></span>&gt; 20° ou blocs — interdit</div>
-      <div><span class="pastille" style="background:#7FB3D5"></span>Traces de Curiosity</div>
+      <div><span class="pastille" style="background:#3CB44B"></span>Slope &lt; 10° — normal walking</div>
+      <div><span class="pastille" style="background:#E0A33C"></span>10° to 20° — caution</div>
+      <div><span class="pastille" style="background:#B5462A"></span>&gt; 20° or boulders — no-go</div>
+      <div><span class="pastille" style="background:#7FB3D5"></span>Curiosity traverse</div>
     </div>
   </div>
 </aside>
 
 <aside class="panneau verre" id="p-mission">
   <div class="p-tete">
-    <span class="etiq">Sortie 01 — relevé</span>
-    <button class="repli" data-repli title="Replier"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 15 6-6 6 6"/></svg></button>
+    <span class="etiq">EVA 01 — survey</span>
+    <button class="repli" data-repli title="Collapse"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 15 6-6 6 6"/></svg></button>
   </div>
   <div class="p-corps">
     <div class="bilan" id="bilan"></div>
-    <span class="etiq" style="display:block;margin:4px 0 2px">Profil en long</span>
+    <span class="etiq" style="display:block;margin:4px 0 2px">Elevation profile</span>
     <svg id="profil" viewBox="0 0 352 92" preserveAspectRatio="none"></svg>
     <div style="font-size:10.5px;color:var(--txt-4);margin-bottom:12px">
-      Bande inférieure : classe de danger du terrain sous les pieds.
+      Bottom band: hazard class of the ground underfoot.
     </div>
-    <span class="etiq" style="display:block;margin-bottom:5px">Déroulé</span>
+    <span class="etiq" style="display:block;margin-bottom:5px">Sequence</span>
     <div id="etapes"></div>
     <div style="font-size:10.5px;color:var(--txt-4);margin-top:12px;line-height:1.45" id="hypotheses"></div>
   </div>
   <div class="p-pied">
     <button class="btn btn-cle" id="vers-marche" style="width:100%">
-      Passer en mode marche
+      Switch to walk mode
       <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h13M12 5l7 7-7 7"/></svg>
     </button>
   </div>
@@ -360,22 +410,29 @@ body[data-ecran="marche"] #hud{opacity:1;pointer-events:auto}
 
 <aside class="panneau verre" id="p-conditions">
   <div class="p-tete">
-    <span class="etiq">Conditions — dernières mesures publiées</span>
+    <span class="etiq">Conditions — latest published measurements</span>
     <span class="etiq data" id="cond-maj" style="flex:none;color:var(--txt-4)"></span>
-    <button class="repli" data-repli title="Replier"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 15 6-6 6 6"/></svg></button>
+    <button class="repli" data-repli title="Collapse"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 15 6-6 6 6"/></svg></button>
   </div>
   <div class="p-corps"><div class="mesures" id="mesures"></div></div>
 </aside>
 
 <aside class="panneau verre" id="p-comms">
   <div class="p-tete">
-    <span class="etiq">Liaison</span>
+    <span class="etiq">Crew link</span>
     <span class="etiq data" id="delai" style="flex:none;color:var(--cy-400)"></span>
-    <button class="repli" data-repli title="Replier"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 15 6-6 6 6"/></svg></button>
+    <button class="repli" data-repli title="Collapse"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 15 6-6 6 6"/></svg></button>
   </div>
   <div class="p-corps" style="display:flex;flex-direction:column;flex:1;min-height:0">
+    <div id="suivi"><span class="puce-etat"></span>
+      <span>Walker <span class="data" id="suivi-txt">—</span></span><span class="h data" id="suivi-h"></span>
+      <button class="btn btn-min" id="suivi-auto" aria-pressed="true" title="Keep the walker in view">Follow</button></div>
     <div id="fil"></div>
-    <span class="etiq" style="display:block;margin-bottom:6px">Émettre</span>
+    <form class="composer" id="composer" autocomplete="off">
+      <select id="c-prio" aria-label="Priority"><option value="info">Info</option><option value="prudence">Caution</option><option value="danger">Urgent</option></select>
+      <input id="c-texte" maxlength="280" placeholder="Message to the crew…" aria-label="Message">
+      <button class="btn btn-min btn-cle" type="submit" aria-label="Send"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12 20 4l-6 16-3-7Z"/></svg></button>
+    </form>
     <div class="envois" id="envois"></div>
   </div>
 </aside>
@@ -387,7 +444,7 @@ body[data-ecran="marche"] #hud{opacity:1;pointer-events:auto}
 
   <div class="colonne" id="hud-g">
     <div class="bloc verre" id="b-prochain">
-      <div class="l">Prochain point <span class="data" id="h-etape" style="color:var(--cy-400)"></span></div>
+      <div class="l">Next waypoint <span class="data" id="h-etape" style="color:var(--cy-400)"></span></div>
       <div class="nom" id="h-nom">—</div>
       <div class="sci" id="h-sci"></div>
     </div>
@@ -396,25 +453,25 @@ body[data-ecran="marche"] #hud{opacity:1;pointer-events:auto}
       <div class="g" id="h-dist">0<span class="unite"> m</span></div>
     </div>
     <div class="bloc verre" id="b-temps">
-      <div class="l">Temps estimé</div>
+      <div class="l">Time estimate</div>
       <div class="g" id="h-temps">0<span class="unite"> min</span></div>
     </div>
   </div>
 
   <div class="colonne" id="hud-d">
     <div class="bloc verre" id="b-pente" data-n="ok">
-      <div class="l" id="h-pente-etat">Terrain normal</div>
+      <div class="l" id="h-pente-etat">Normal ground</div>
       <div class="g" id="h-pente">0,0°</div>
       <div style="font-size:11px;color:var(--txt-3);margin-top:6px" id="h-pente-txt"></div>
     </div>
     <div class="bloc verre" id="b-retour">
-      <div class="l">Retour habitat</div>
+      <div class="l">Back to habitat</div>
       <div class="g" id="h-retour">0<span class="unite"> min</span></div>
     </div>
     <div class="duo">
       <div class="bloc verre"><div class="l">Dose</div>
-        <div class="g data" style="font-size:21px" id="h-dose">0,000<span class="unite" style="font-size:11px"> mSv</span></div></div>
-      <div class="bloc verre"><div class="l">Cap</div>
+        <div class="g data" style="font-size:21px" id="h-dose">0.000<span class="unite" style="font-size:11px"> mSv</span></div></div>
+      <div class="bloc verre"><div class="l">Heading</div>
         <div class="g data" style="font-size:21px" id="h-cap">0°</div></div>
     </div>
   </div>
@@ -423,36 +480,64 @@ body[data-ecran="marche"] #hud{opacity:1;pointer-events:auto}
     <div class="plateau"><canvas id="mini-c" width="560" height="560"></canvas><span class="nord" id="mini-nord"></span><span class="cadre"></span></div>
     <span class="joueur"></span>
   </div>
-  <div id="boussole-etiq"><span class="etiq" id="mini-etiq">Orientation · 250 m</span></div>
+  <div id="boussole-etiq">
+    <span class="etiq" id="mini-etiq">Zones · 160 m</span>
+    <div id="radar-ctl">
+      <div class="segments" id="radar-couches" title="Radar layer (R)">
+        <button data-c="zones" aria-selected="true">Zones</button>
+        <button data-c="trajet" aria-selected="false">Route</button>
+      </div>
+      <button class="btn btn-min" id="radar-portee" title="Radar range">160 m</button>
+    </div>
+  </div>
+
+  <div id="h-liaison" class="verre">
+    <div class="e"><span class="puce-etat etat" id="hl-puce" style="border:0;padding:0"></span>
+      <span class="etiq" id="hl-de">Orbit</span><span class="etiq data" id="hl-h" style="margin-left:auto;color:var(--txt-3)"></span></div>
+    <div class="t" id="hl-t"></div>
+    <div class="rep">
+      <button class="btn btn-min" data-rep="ok"><kbd>1</kbd> Copy</button>
+      <button class="btn btn-min" data-rep="retour-ok"><kbd>2</kbd> Heading back</button>
+      <button class="btn btn-min" data-rep="aide"><kbd>3</kbd> Assistance</button>
+    </div>
+  </div>
 
   <div id="sur-cible" class="verre">
     <div class="t">
       <span class="puce-etat etat" style="--c:var(--cy-400);border:0;padding:0"></span>
-      <span class="etiq etiq-cy">Cible atteinte</span>
+      <span class="etiq etiq-cy">Target reached</span>
       <span class="nom" id="sc-nom" style="margin-left:auto"></span>
     </div>
     <div class="sci" id="sc-sci"></div>
     <div class="chrono">
       <span class="g" id="sc-chrono">20:00</span>
-      <div><div class="etiq">Relevé en cours</div>
+      <div><div class="etiq">Sampling in progress</div>
         <div style="font-size:11px;color:var(--txt-3)" id="sc-reste"></div></div>
-      <button class="btn btn-min" id="sc-fin" style="margin-left:auto">Terminer</button>
+      <button class="btn btn-min" id="sc-fin" style="margin-left:auto">Finish</button>
     </div>
   </div>
 
   <div id="hud-cmd" class="verre">
+    <div class="allure">
+      <span>Pace <span class="data" id="c-vitesse">—</span></span>
+      <div class="segments" id="c-facteur" title="Demo time acceleration">
+        <button data-f="1" aria-selected="false">×1</button>
+        <button data-f="10" aria-selected="true">×10</button>
+        <button data-f="30" aria-selected="false">×30</button>
+      </div>
+    </div>
     <div class="cmd-l">
       <button class="btn btn-min" id="c-recul">−25 m</button>
-      <button class="btn btn-min btn-cle" id="c-lecture" style="flex:1">Avancer</button>
+      <button class="btn btn-min btn-cle" id="c-lecture" style="flex:1">Walk</button>
       <button class="btn btn-min" id="c-avance">+25 m</button>
-      <button class="btn btn-min" id="c-reset" title="Revenir à l'habitat">⟲</button>
+      <button class="btn btn-min" id="c-reset" title="Back to the habitat">⟲</button>
     </div>
     <div id="barre-prog"><i id="prog-i"></i></div>
-    <input type="range" id="c-curseur" min="0" max="1000" value="0" style="width:100%" aria-label="Position sur l'itinéraire">
+    <input type="range" id="c-curseur" min="0" max="1000" value="0" style="width:100%" aria-label="Position along the route">
     <div class="cmd-info">
       <span id="c-pos">0 / 0 m</span>
       <span id="c-alt">—</span>
-      <span>← → · espace · échap</span>
+      <span>← → · space · R · esc</span>
     </div>
   </div>
 </section>
@@ -460,9 +545,9 @@ body[data-ecran="marche"] #hud{opacity:1;pointer-events:auto}
 <div id="alertes"></div>
 
 <script src="assets/vendor/leaflet/leaflet.js"></script>
-<script src="assets/js/noyau.js"></script>
-<script src="assets/js/carte2d.js"></script>
-<script src="assets/js/hud.js"></script>
-<script type="module" src="assets/js/app.js"></script>
+<script src="assets/js/noyau.js?v=9"></script>
+<script src="assets/js/carte2d.js?v=8"></script>
+<script src="assets/js/hud.js?v=7"></script>
+<script type="module" src="assets/js/app.js?v=19"></script>
 </body>
 </html>

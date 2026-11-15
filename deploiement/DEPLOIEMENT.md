@@ -74,30 +74,17 @@ Le `rsync --delete` du script supprime côté serveur les fichiers retirés.
 
 ## 4. Point de sécurité — à lire
 
-**L'authentification de `index.html` est une maquette.** Le code d'accès est
-comparé à une empreinte SHA-256 et le compte se bloque après 5 échecs, mais la
-vérification a lieu **dans le navigateur** : quelqu'un qui lit le code source
-peut la contourner. C'est une démonstration de la mécanique, pas une protection.
+**Il n'y a plus d'authentification** (non autorisée par le règlement du
+concours). L'écran d'entrée propose seulement de choisir un **poste** (équipe
+de surface, relais en orbite, contrôle Terre). Le poste règle ce que
+l'interface propose (conduire la marche, émettre, écouter) : ce n'est **pas**
+une protection, et le site ne sert aucune donnée sensible. Ouvrir `app.html`
+directement donne le poste « surface ».
 
-Pour une vraie mise en production il faudrait :
-- la vérification côté serveur (session signée, cookie `HttpOnly` + `Secure`) ;
-- une limitation de débit sur l'IP, pas seulement un compteur dans le navigateur ;
-- les comptes dans une base, avec un hachage lent (argon2 ou bcrypt), pas SHA-256.
-
-Identifiants de démonstration (à changer avant toute diffusion publique) :
-
-| Poste | Identifiant | Code |
-| --- | --- | --- |
-| Rover (surface) | `ged.rover` | `ARES-01` |
-| Orbite | `crew.orbite` | `ARES-02` |
-| Terre | `sol.terre` | `ARES-03` |
-
-Pour changer un code : calculer l'empreinte et la reporter dans
-`site/assets/js/auth.js` (table `COMPTES`).
-
-```bash
-python -c "import hashlib;print(hashlib.sha256(b'martian-map-2026:ged.rover:NOUVEAU_CODE').hexdigest())"
-```
+**Langue** : toute l'interface est en anglais (règle de soumission).
+`site/assets/data/mission.json` a été traduit à la main : si le pipeline est
+relancé, il régénère des textes en français (constantes `CONDITIONS`,
+`SOURCES`, `SCIENCE_CIBLES` de `martian_map_pipeline.py`) à traduire aussi.
 
 **La clé SSH privée** (`_prive-acces-vps/veline_vps`) et le mot de passe qui
 l'accompagne sont dans le dossier du projet. Ils sont exclus du dépôt par

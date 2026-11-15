@@ -360,3 +360,60 @@ masque le bouton 3D — le chemin de secours existe mais n'a pas été provoqué
 Tout est dans **`deploiement/DEPLOIEMENT.md`**. En résumé : le site (18 Mo)
 est déjà déposé sur le VPS dans `~/martian-map.nouveau`, rien de live n'a été
 touché. Il reste à pointer le DNS puis à lancer `bash ~/mise-en-ligne.sh`.
+
+## 10. Version 4 (15 nov., matin) — design, réalisme, liaison
+
+Non déployée : à valider en local (`cd site && python -m http.server 8000`).
+
+**Système de design.** Verre gris réel : les plaques floutent, teintent en gris
+et **désaturent** ce qu'elles recouvrent (`--verre-fume`, `--flou-fume` dans
+`martian.css`). Ne pas utiliser `brightness()` dans `backdrop-filter` : il
+bloque le rendu de Chrome sur cette page (constaté). Typographie agrandie
+(corps 17 px), textes secondaires éclaircis.
+
+**Écran d'accès.** Gauche : surface claire tirée de la palette, carte de
+verre dépoli blanc, logos DEVSEC + NASA en tête (« Données NASA »).
+Droite : **casque NASA en 3D** (modèle officiel *Helmet*, NASA 3D Resources),
+visière dorée qui reflète un ciel martien, rotation au doigt/souris, il se
+tourne vers l'utilisateur à l'entrée.
+
+**Mise à jour (même jour) : plus d'authentification et interface 100 % en
+anglais**, à la demande de l'équipe (authentification non autorisée par le
+concours, soumission en anglais). L'écran d'entrée (`index.html` +
+`assets/js/entree.js`) propose seulement « Choose your station » : Surface
+crew / Orbit relay / Mission control. `auth.js` est supprimé. Les textes de
+`mission.json` sont traduits à la main (le pipeline produit encore du
+français). Les clés de stockage local sont passées en `mm.en.*`.
+
+**Visière.**
+- Vitesse réelle : la marche suit la vitesse prudente calculée point par
+  point (≈ 1,7–2,9 km/h), accélérable ×1 / ×10 / ×30. Les ±25 m glissent.
+- Caméra lissée (cap et position), balancement de pas, regard un peu plongeant,
+  bruit de pas synthétique.
+- Ciel martien en dégradé + brume assortie ; texture HiRISE 0,5 m (la même
+  que la carte 2D) ; grain de sol procédural de près seulement.
+- Sentier = régolithe tassé **peint dans le terrain** (masque), plus de
+  ruban cyan flottant ; chevrons de guidage discrets sur 35 m ; jalons en
+  aluminium éclairés tous les 25 m.
+- Habitat : rover pressurisé **Space Exploration Vehicle** (modèle NASA),
+  plus aucun point clignotant (ni dans la barre, ni à l'habitat).
+- Radar à couches (touche R) : « Zones » = dangers du pipeline + zones
+  signalées par l'orbite, distance à l'interdit le plus proche ; « Trajet ».
+  Portée 160 / 320 m.
+
+**Liaison.** Messages libres avec priorité, accusés de réception
+automatiques (« ✓✓ reçu · Rover 09:17 »), télémétrie du marcheur en direct
+chez l'orbite et la Terre, **zone à éviter** posée au clic par l'orbite →
+carte 2D, terrain 3D (paroi rouge qui suit le relief) et radar de la visière.
+Nouveaux messages : éruption solaire (SPE), assistance, retour engagé. Dans
+la visière, réponses rapides 1 / 2 / 3.
+
+**Modèles 3D** (`site/assets/modeles/`) recompressés avec gltf-transform
+(Draco) : SEV 22 Mo → 750 Ko, casque 170 Ko, MRO 107 Ko (non utilisé pour
+l'instant). Décodeur Draco servi localement (`assets/vendor/draco/`).
+
+**Non vérifié v4** : mobile/tablette, Firefox/Safari, vibrations sur appareil réel.
+**Point à arbitrer** : le logo NASA est désormais en tête de l'écran d'accès
+et de la barre, avec la mention « Données NASA » et la clause de
+non-affiliation. Les règles Space Apps interdisent de suggérer un
+partenariat avec la NASA : à confirmer avant soumission.
