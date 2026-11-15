@@ -58,8 +58,8 @@ window.MMHud = (function () {
     c.clearRect(0, 0, W, W);
 
     c.save();
-    c.translate(R, R);
-    c.rotate(-cap * MM.RAD);                               // le cap suivi pointe vers le haut
+    c.translate(R, R * 1.26);          // le marcheur est bas : la route devant occupe le plateau
+    c.rotate(-cap * MM.RAD);           // le cap suivi pointe vers le haut
 
     var ori = [e.lon, e.lat];
     function p(lon, lat) {
@@ -69,13 +69,13 @@ window.MMHud = (function () {
     }
 
     // cercles de portée
-    c.strokeStyle = 'rgba(255,255,255,.08)'; c.lineWidth = 1.5;
+    c.strokeStyle = 'rgba(255,255,255,.1)'; c.lineWidth = 2.5;
     [1 / 3, 2 / 3, 1].forEach(function (f) {
-      c.beginPath(); c.arc(0, 0, R * f * .96, 0, 6.2832); c.stroke();
+      c.beginPath(); c.arc(0, 0, R * f * 1.2, 0, 6.2832); c.stroke();
     });
 
     // traces de Curiosity, en fond
-    c.strokeStyle = 'rgba(127,179,213,.45)'; c.lineWidth = 2;
+    c.strokeStyle = 'rgba(127,179,213,.5)'; c.lineWidth = 5;
     c.beginPath();
     M.waypoints_curiosity.coordinates.forEach(function (w, i) {
       var q = p(w[0], w[1]); c[i ? 'lineTo' : 'moveTo'](q[0], q[1]);
@@ -91,11 +91,11 @@ window.MMHud = (function () {
       });
       c.stroke();
     }
-    trace('rgba(2,8,10,.85)', 15);
-    trace('#AFF2FA', 6);
+    trace('rgba(2,8,10,.9)', 30);
+    trace('#8FEEFF', 15);
 
     // partie déjà parcourue, en retrait
-    c.strokeStyle = 'rgba(175,242,250,.3)'; c.lineWidth = 6; c.beginPath();
+    c.strokeStyle = 'rgba(120,150,160,.55)'; c.lineWidth = 13; c.beginPath();
     for (var i = 0; i <= e.i; i++) {
       var u = p(IT.coordinates[i][0], IT.coordinates[i][1]);
       c[i ? 'lineTo' : 'moveTo'](u[0], u[1]);
@@ -104,16 +104,18 @@ window.MMHud = (function () {
 
     // habitat et cibles
     var h = p(M.habitat.lon, M.habitat.lat);
-    c.strokeStyle = '#FFFFFF'; c.lineWidth = 5;
-    c.strokeRect(h[0] - 11, h[1] - 11, 22, 22);
+    c.strokeStyle = 'rgba(2,8,10,.8)'; c.lineWidth = 13;
+    c.strokeRect(h[0] - 15, h[1] - 15, 30, 30);
+    c.strokeStyle = '#FFFFFF'; c.lineWidth = 7;
+    c.strokeRect(h[0] - 15, h[1] - 15, 30, 30);
     M.cibles.forEach(function (ci) {
       var q = p(ci.lon, ci.lat);
       var coul = ci.nature === 'creux' ? '#6FA8FF' : '#2FD0E6';
-      c.strokeStyle = 'rgba(2,8,10,.8)'; c.lineWidth = 11;
-      c.beginPath(); c.arc(q[0], q[1], 15, 0, 6.2832); c.stroke();
-      c.strokeStyle = coul; c.lineWidth = 5;
-      c.beginPath(); c.arc(q[0], q[1], 15, 0, 6.2832); c.stroke();
-      c.fillStyle = coul; c.beginPath(); c.arc(q[0], q[1], 6, 0, 6.2832); c.fill();
+      c.strokeStyle = 'rgba(2,8,10,.8)'; c.lineWidth = 16;
+      c.beginPath(); c.arc(q[0], q[1], 21, 0, 6.2832); c.stroke();
+      c.strokeStyle = coul; c.lineWidth = 8;
+      c.beginPath(); c.arc(q[0], q[1], 21, 0, 6.2832); c.stroke();
+      c.fillStyle = coul; c.beginPath(); c.arc(q[0], q[1], 9, 0, 6.2832); c.fill();
     });
 
     c.restore();

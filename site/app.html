@@ -64,6 +64,8 @@ body[data-vue="3d"] #carte,body[data-ecran="marche"] #carte{opacity:0;pointer-ev
 #p-conditions{bottom:18px;left:18px;width:calc(100% - 430px);max-width:860px}
 #p-comms{bottom:18px;right:18px;width:376px;height:240px}
 body[data-ecran="marche"] .panneau{opacity:0;pointer-events:none;transform:translateY(8px)}
+body[data-ecran="marche"] [data-hors-marche]{opacity:0;pointer-events:none;
+  transition:opacity var(--t-moyen) var(--e)}
 .panneau{transition:opacity var(--t-moyen) var(--e),transform var(--t-moyen) var(--e)}
 #p-mission.ferme{width:218px}
 body.plein #p-mission,body.plein #p-conditions,body.plein #p-comms,body.plein #p-couches{opacity:0;pointer-events:none}
@@ -134,7 +136,7 @@ body[data-ecran="marche"] #hud{opacity:1;pointer-events:auto}
   background:radial-gradient(ellipse 72% 64% at 50% 48%,transparent 52%,rgba(0,0,0,.62) 100%)}
 
 /* bande de cap, en haut : fine, à la limite du champ de vision */
-#ruban{top:58px;left:50%;transform:translateX(-50%);width:min(620px,56vw);height:42px;
+#ruban{top:72px;left:50%;transform:translateX(-50%);width:min(620px,56vw);height:42px;
   background:linear-gradient(180deg,rgba(9,13,17,.8),rgba(9,13,17,.55));
   border-radius:12px;overflow:hidden;display:grid;place-items:center}
 #ruban canvas{display:block;width:100%;height:100%}
@@ -143,8 +145,8 @@ body[data-ecran="marche"] #hud{opacity:1;pointer-events:auto}
   border-top:9px solid var(--cy-300)}
 
 .colonne{display:flex;flex-direction:column;gap:12px;width:296px}
-#hud-g{left:26px;top:120px}
-#hud-d{right:26px;top:120px;align-items:stretch}
+#hud-g{left:26px;top:132px}
+#hud-d{right:26px;top:132px;align-items:stretch}
 .bloc{padding:15px 17px;border-radius:var(--r-m);
   background:linear-gradient(158deg,rgba(17,24,31,.84),rgba(9,13,17,.8));
   backdrop-filter:blur(22px) saturate(135%);-webkit-backdrop-filter:blur(22px) saturate(135%)}
@@ -170,16 +172,16 @@ body[data-ecran="marche"] #hud{opacity:1;pointer-events:auto}
 
 /* minicarte 3D façon jeu — inclinée, orientée selon le cap */
 #boussole3d{left:26px;bottom:26px;width:230px;height:230px;perspective:620px;pointer-events:none}
-#boussole3d .plateau{width:100%;height:100%;transform:rotateX(58deg);transform-style:preserve-3d;
+#boussole3d .plateau{width:100%;height:100%;transform:rotateX(48deg) scale(1.08);transform-style:preserve-3d;
   border-radius:50%;overflow:hidden;position:relative;
   background:radial-gradient(circle,rgba(10,16,20,.9),rgba(6,9,11,.96));
   box-shadow:0 0 0 1.5px var(--verre-bord),0 24px 50px -16px rgba(0,0,0,.9),
              0 0 46px -10px rgba(47,208,230,.3) inset}
 #boussole3d canvas{position:absolute;inset:0;width:100%;height:100%}
-#boussole3d .joueur{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);
+#boussole3d .joueur{position:absolute;left:50%;top:70%;transform:translate(-50%,-50%);
   width:0;height:0;border-left:8px solid transparent;border-right:8px solid transparent;
   border-bottom:17px solid var(--cy-300);filter:drop-shadow(0 0 7px rgba(47,208,230,.9))}
-#boussole3d .nord{position:absolute;left:50%;top:50%;width:2px;height:50%;transform-origin:top center;
+#boussole3d .nord{position:absolute;left:50%;top:70%;width:2px;height:42%;transform-origin:top center;
   background:linear-gradient(180deg,rgba(255,77,79,.85),transparent)}
 #boussole3d .cadre{position:absolute;inset:0;border-radius:50%;pointer-events:none;
   box-shadow:0 0 0 1.5px rgba(255,255,255,.14) inset}
@@ -295,7 +297,7 @@ body[data-ecran="marche"] #hud{opacity:1;pointer-events:auto}
   </div>
 
   <div class="droite">
-    <div class="segments" id="vues">
+    <div class="segments" id="vues" data-hors-marche>
       <button data-vue="2d" aria-selected="true" class="cy">Carte 2D</button>
       <button data-vue="3d" aria-selected="false" class="cy">Terrain 3D</button>
     </div>

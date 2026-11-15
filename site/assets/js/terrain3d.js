@@ -135,7 +135,8 @@ export function creerTerrain(toile, options) {
   function ruban(points, largeurM, couleur, opacite, hauteurSol) {
     var s = [], uv = [], idx = [];
     for (var i = 0; i < points.length; i++) {
-      var a = points[Math.max(i - 1, 0)], b = points[Math.min(i + 1, points.length - 1)];
+      // tangente prise sur ±2 points : évite le repli du ruban dans les angles
+      var a = points[Math.max(i - 2, 0)], b = points[Math.min(i + 2, points.length - 1)];
       var tx = b.x - a.x, tz = b.z - a.z;
       var n = Math.hypot(tx, tz) || 1;
       var px = (tz / n) * largeurM / 2, pz = (-tx / n) * largeurM / 2;
@@ -159,22 +160,48 @@ export function creerTerrain(toile, options) {
     }));
   }
 
-  var ptsRoute = [];
+  // Deux représentations du même itinéraire. Vue d'ensemble : un ruban large,
+  // lisible à 1 km. Visière : un sentier d'1,8 m jalonné de balises tous les
+  // 25 m — à hauteur d'œil, un ruban de 13 m ressemblerait à une autoroute.
+  var ptsRoute = [], gOrbite, gVisiere;
   function ajouterItineraire() {
     var IT = opt.mission.itineraire;
     ptsRoute = IT.coordinates.map(function (c, i) {
-      var v = versScene(c[0], c[1], IT.altitude_m[i]);
-      return v;
+      return versScene(c[0], c[1], IT.altitude_m[i]);
     });
-    groupe.add(ruban(ptsRoute, 13, 0x02080A, .55, 0.5));
-    groupe.add(ruban(ptsRoute, 8, 0x2FD0E6, .55, 0.9));
-    groupe.add(ruban(ptsRoute, 3.6, 0xDFFBFF, 1, 1.25));
 
-    // traces de Curiosity, plus discrètes
+    gOrbite = new THREE.Group();
+    gOrbite.add(ruban(ptsRoute, 13, 0x02080A, .5, 0.5));
+    gOrbite.add(ruban(ptsRoute, 8, 0x2FD0E6, .5, 0.9));
+    gOrbite.add(ruban(ptsRoute, 3.4, 0xDFFBFF, .95, 1.25));
     var w = opt.mission.waypoints_curiosity.coordinates.map(function (c) {
       return versScene(c[0], c[1], altitude(c[0], c[1]));
     });
-    groupe.add(ruban(w, 4, 0x7FB3D5, .5, 0.6));
+    gOrbite.add(ruban(w, 4, 0x7FB3D5, .5, 0.6));
+    groupe.add(gOrbite);
+
+    gVisiere = new THREE.Group();
+    gVisiere.add(ruban(ptsRoute, 1.0, 0x0A1A1F, .45, 0.05));
+    gVisiere.add(ruban(ptsRoute, 0.55, 0x7FE8F7, .5, 0.09));
+
+    // jalons : petits piquets plantés le long du trajet
+    var geoP = new THREE.CylinderGeometry(0.055, 0.055, 1.25, 6);
+    var matP = new THREE.MeshBasicMaterial({color: 0x9BE9F6, transparent: true, opacity: .75});
+    var geoT = new THREE.SphereGeometry(0.17, 8, 6);
+    var matT = new THREE.MeshBasicMaterial({color: 0x2FD0E6});
+    var D = IT.distance_cum_m, prochain = 0;
+    for (var i = 0; i < ptsRoute.length; i++) {
+      if (D[i] < prochain) continue;
+      prochain = D[i] + 25;
+      var p = ptsRoute[i];
+      var piquet = new THREE.Mesh(geoP, matP);
+      piquet.position.set(p.x, p.y + 0.62, p.z);
+      var tete = new THREE.Mesh(geoT, matT);
+      tete.position.set(p.x, p.y + 1.3, p.z);
+      gVisiere.add(piquet); gVisiere.add(tete);
+    }
+    gVisiere.visible = false;
+    groupe.add(gVisiere);
   }
 
   function balise(lon, lat, couleur, hauteur) {
@@ -200,10 +227,10 @@ export function creerTerrain(toile, options) {
   var balises = [];
   function ajouterPoints() {
     var m = opt.mission;
-    var bh = balise(m.habitat.lon, m.habitat.lat, 0xFFFFFF, 110);
+    var bh = balise(m.habitat.lon, m.habitat.lat, 0xFFFFFF, 60);
     groupe.add(bh); balises.push(bh);
     m.cibles.forEach(function (c) {
-      var b = balise(c.lon, c.lat, c.nature === 'creux' ? 0x6FA8FF : 0x2FD0E6, 90);
+      var b = balise(c.lon, c.lat, c.nature === 'creux' ? 0x6FA8FF : 0x2FD0E6, 46);
       groupe.add(b); balises.push(b);
     });
   }
@@ -309,7 +336,14 @@ export function creerTerrain(toile, options) {
           return api;
         });
     },
-    mode: function (m) { mode = m; majCamera(dernier); },
+    mode: function (m) {
+      mode = m;
+      if (gOrbite) gOrbite.visible = (m !== 'visiere');
+      if (gVisiere) gVisiere.visible = (m === 'visiere');
+      if (scene) scene.fog = (m === 'visiere')
+        ? new THREE.Fog(0x3A2A1F, 90, 1150) : new THREE.Fog(0x30231A, 520, 2700);
+      majCamera(dernier);
+    },
     visible: function (v) { visible = v; if (v) dimensionner(); },
     position: function (etat) {
       dernier = etat;

@@ -134,6 +134,7 @@ import { creerTerrain } from './terrain3d.js';
     });
     $('#hud').setAttribute('aria-hidden', e !== 'marche');
     if (T3D) {
+      T3D.position(etat(parcours));
       T3D.mode(e === 'marche' ? 'visiere' : 'orbite');
       T3D.visible(e === 'marche' || vue === '3d');
     }
@@ -311,7 +312,9 @@ import { creerTerrain } from './terrain3d.js';
     var t = creerTerrain($('#vue3d'), {mission: M});
     return t.charger().then(function (api) {
       T3D = api;
-      T3D.visible(false);
+      T3D.position(etat(parcours));
+      T3D.visible(ecran === 'marche' || vue === '3d');
+      T3D.mode(ecran === 'marche' ? 'visiere' : 'orbite');
       fini('Prêt');
     }).catch(function (err) {
       console.warn('Terrain 3D indisponible :', err);
