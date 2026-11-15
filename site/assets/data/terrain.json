@@ -1,0 +1,15 @@
+{
+ "n": 512,
+ "alt_min_m": -3889.94,
+ "alt_max_m": -3393.63,
+ "largeur_m": 2007,
+ "hauteur_m": 2000,
+ "bbox": [
+  137.364358254,
+  -4.821777591,
+  137.398217558,
+  -4.788036381
+ ],
+ "pixel_m": 1.0,
+ "encodage": "altitude = alt_min + (R*256+G)/65535 * (alt_max-alt_min)"
+}

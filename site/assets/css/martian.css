@@ -1,0 +1,290 @@
+@import url("../fonts/polices.css");
+
+/* ===========================================================================
+   MARTIAN MAP — système de design
+   DEVSEC · NASA Space Apps Challenge 2026 · Libreville
+
+   Principes retenus, et pourquoi :
+
+   1. VERRE GRIS.  Les surfaces sont des plaques de verre translucide tirées de
+      la palette fournie (gris neutre #6E6F71 → #FFFFFF). Le verre se pose sur
+      l'imagerie martienne : l'instrument n'occulte jamais complètement le
+      terrain, exactement comme une visière.
+   2. ACCENT FROID.  Le terrain de Gale est rouille. Un accent chaud s'y noie.
+      L'accent instrument est donc cyan : contraste maximal sur la roche, et
+      lecture immédiate de « ceci est une donnée, pas du paysage ».
+   3. LE CHAUD EST RÉSERVÉ AU DANGER.  Ambre = prudence, rouge = limite. Aucune
+      décoration chaude ailleurs : dans une interface de sécurité, une couleur
+      d'alerte utilisée pour faire joli est une faute.
+   4. LE CENTRE EST LIBRE.  En mode marche, rien n'est placé au centre : c'est
+      le champ de vision de l'astronaute.
+   =========================================================================== */
+
+:root{
+  /* --- sol --- */
+  --ink-900:#070A0C;
+  --ink-800:#0B1013;
+  --ink-700:#111820;
+  --ink-600:#18222B;
+
+  /* --- gris de la palette fournie --- */
+  --g-05:#F8F8F9; --g-10:#F0F0F1; --g-20:#E0E0E2; --g-30:#D0D0D2;
+  --g-40:#C0C0C2; --g-50:#A8A8AB; --g-60:#909094; --g-70:#6E6F71;
+
+  /* --- verre --- */
+  --verre-1:rgba(255,255,255,.045);
+  --verre-2:rgba(255,255,255,.075);
+  --verre-3:rgba(255,255,255,.115);
+  --verre-bord:rgba(255,255,255,.135);
+  --verre-bord-fort:rgba(255,255,255,.26);
+  --verre-ombre:0 24px 60px -24px rgba(0,0,0,.92);
+  --flou:blur(22px) saturate(150%);
+
+  /* --- texte --- */
+  --txt:#F2F4F6; --txt-2:#B4BBC2; --txt-3:#79828B; --txt-4:#4D5760;
+
+  /* --- accent instrument --- */
+  --cy-200:#AFF2FA; --cy-300:#6FE2F2; --cy-400:#2FD0E6;
+  --cy-500:#11B2CC; --cy-600:#0A8CA3; --cy-700:#076B7D;
+  --cy-ombre:0 0 0 1px rgba(47,208,230,.35), 0 8px 28px -8px rgba(47,208,230,.45);
+
+  /* --- sémantique sécurité --- */
+  --sur:#56CC8A; --prudence:#FFB020; --danger:#FF4D4F; --danger-2:#C62A2C;
+
+  /* --- marques --- */
+  --nasa-bleu:#0B3D91; --nasa-rouge:#FC3D21;
+
+  /* --- rythme --- */
+  --r-s:10px; --r-m:16px; --r-l:22px; --r-xl:30px;
+  --t-court:.16s; --t-moyen:.3s; --t-long:.55s;
+  --e:cubic-bezier(.2,.75,.25,1);
+
+  --police-titre:"Space Grotesk","Segoe UI",system-ui,sans-serif;
+  --police-ui:"Inter","Segoe UI",system-ui,sans-serif;
+  --police-data:"JetBrains Mono",ui-monospace,"Cascadia Mono",Consolas,monospace;
+}
+
+*,*::before,*::after{box-sizing:border-box}
+html,body{height:100%;margin:0}
+body{
+  background:var(--ink-900); color:var(--txt);
+  font:400 16px/1.5 var(--police-ui);
+  -webkit-font-smoothing:antialiased; text-rendering:optimizeLegibility;
+  overflow:hidden;
+}
+h1,h2,h3,h4{margin:0;font-family:var(--police-titre);font-weight:600;letter-spacing:-.015em}
+button,input,select,textarea{font:inherit;color:inherit}
+button{border:0;background:none;cursor:pointer}
+a{color:var(--cy-300);text-decoration:none}
+::selection{background:rgba(47,208,230,.3)}
+
+/* barres de défilement discrètes */
+*::-webkit-scrollbar{width:9px;height:9px}
+*::-webkit-scrollbar-track{background:transparent}
+*::-webkit-scrollbar-thumb{background:rgba(255,255,255,.1);border-radius:9px;border:2px solid transparent;background-clip:content-box}
+*::-webkit-scrollbar-thumb:hover{background:rgba(255,255,255,.2);background-clip:content-box}
+
+/* ===========================================================================
+   VERRE — la brique de base
+   =========================================================================== */
+.verre{
+  position:relative;
+  background:linear-gradient(158deg,var(--verre-3),var(--verre-1) 58%,rgba(255,255,255,.02));
+  backdrop-filter:var(--flou); -webkit-backdrop-filter:var(--flou);
+  border:1px solid var(--verre-bord);
+  border-radius:var(--r-m);
+  box-shadow:var(--verre-ombre);
+}
+/* liseré lumineux en haut de plaque : donne l'épaisseur du verre */
+.verre::before{
+  content:""; position:absolute; inset:0 0 auto; height:1px; border-radius:inherit;
+  background:linear-gradient(90deg,transparent,var(--verre-bord-fort) 22%,var(--verre-bord-fort) 78%,transparent);
+  pointer-events:none;
+}
+.verre-dense{background:linear-gradient(158deg,rgba(14,20,26,.88),rgba(8,12,16,.82));backdrop-filter:blur(30px) saturate(130%)}
+/* Posé sur l'imagerie : le fond doit rester sombre quelle que soit la couleur
+   de la carte en dessous, sinon le texte secondaire disparaît. La sensation de
+   verre vient alors du flou et du liseré, pas de la transparence. */
+.verre-pose{
+  background:linear-gradient(158deg,rgba(17,24,31,.89),rgba(9,13,17,.86));
+  backdrop-filter:blur(26px) saturate(135%); -webkit-backdrop-filter:blur(26px) saturate(135%);
+  border:1px solid rgba(255,255,255,.12);
+  box-shadow:0 28px 64px -26px rgba(0,0,0,.95),0 0 0 1px rgba(0,0,0,.3);
+}
+.verre-plat{box-shadow:none;border-radius:var(--r-s)}
+@supports not (backdrop-filter:blur(2px)){
+  .verre{background:rgba(14,19,24,.93)}
+}
+
+/* ===========================================================================
+   TYPOGRAPHIE
+   =========================================================================== */
+.titre-xl{font-family:var(--police-titre);font-size:clamp(30px,3.4vw,44px);font-weight:700;line-height:1.05;letter-spacing:-.025em}
+.titre-l {font-family:var(--police-titre);font-size:23px;font-weight:600;line-height:1.15}
+.titre-m {font-family:var(--police-titre);font-size:18px;font-weight:600}
+
+/* étiquette technique : toujours en capitales, toujours espacée, jamais une phrase */
+.etiq{
+  font-family:var(--police-ui); font-size:10.5px; font-weight:600;
+  letter-spacing:.17em; text-transform:uppercase; color:var(--txt-3);
+}
+.etiq-cy{color:var(--cy-400)}
+.data{font-family:var(--police-data);font-variant-numeric:tabular-nums;font-feature-settings:"tnum" 1}
+.unite{font-family:var(--police-ui);font-weight:500;color:var(--txt-3)}
+.sourdine{color:var(--txt-2)}
+.sourdine-2{color:var(--txt-3)}
+
+/* grand nombre d'instrument */
+.nombre{font-family:var(--police-titre);font-weight:700;font-variant-numeric:tabular-nums;letter-spacing:-.03em;line-height:.92}
+.nombre-xxl{font-size:clamp(56px,7vw,96px)}
+.nombre-xl{font-size:clamp(38px,4.4vw,58px)}
+.nombre-l{font-size:30px}
+
+/* ===========================================================================
+   COMMANDES
+   =========================================================================== */
+.btn{
+  display:inline-flex;align-items:center;justify-content:center;gap:10px;
+  padding:13px 20px;border-radius:var(--r-s);
+  font-weight:600;font-size:14.5px;letter-spacing:.01em;
+  border:1px solid var(--verre-bord); background:var(--verre-2); color:var(--txt);
+  transition:background var(--t-court) var(--e),border-color var(--t-court) var(--e),
+             transform var(--t-court) var(--e),box-shadow var(--t-court) var(--e);
+}
+.btn:hover{background:var(--verre-3);border-color:var(--verre-bord-fort)}
+.btn:active{transform:translateY(1px)}
+.btn:focus-visible{outline:2px solid var(--cy-400);outline-offset:2px}
+.btn-cle{
+  background:linear-gradient(140deg,var(--cy-400),var(--cy-600));
+  border-color:transparent;color:#03171C;font-weight:700;
+  box-shadow:var(--cy-ombre);
+}
+.btn-cle:hover{background:linear-gradient(140deg,var(--cy-300),var(--cy-500));border-color:transparent}
+.btn-fant{background:transparent;border-color:transparent;color:var(--txt-2);padding:9px 12px}
+.btn-fant:hover{background:var(--verre-2);color:var(--txt)}
+.btn-min{padding:7px 11px;font-size:12.5px;border-radius:8px}
+.btn[aria-pressed=true],.btn.on{
+  background:linear-gradient(140deg,rgba(47,208,230,.26),rgba(47,208,230,.1));
+  border-color:rgba(47,208,230,.5);color:var(--cy-200);
+}
+.btn:disabled{opacity:.42;pointer-events:none}
+
+/* interrupteur de segment (2D | 3D, rôles…) */
+.segments{display:inline-flex;padding:4px;gap:3px;border-radius:12px;background:rgba(0,0,0,.34);border:1px solid var(--verre-bord)}
+.segments button{padding:7px 14px;border-radius:9px;font-size:13px;font-weight:600;color:var(--txt-3);
+  transition:all var(--t-court) var(--e)}
+.segments button:hover{color:var(--txt)}
+.segments button[aria-selected=true]{background:var(--verre-3);color:var(--txt);box-shadow:0 1px 0 var(--verre-bord-fort) inset}
+.segments button[aria-selected=true].cy{background:linear-gradient(140deg,var(--cy-400),var(--cy-600));color:#03171C}
+
+/* champ de formulaire */
+.champ{display:block;margin-bottom:16px}
+.champ > .etiq{display:block;margin-bottom:7px}
+.saisie{
+  display:flex;align-items:center;gap:11px;
+  padding:0 15px;border-radius:var(--r-s);
+  background:rgba(0,0,0,.3);border:1px solid var(--verre-bord);
+  transition:border-color var(--t-court) var(--e),box-shadow var(--t-court) var(--e),background var(--t-court) var(--e);
+}
+.saisie:focus-within{border-color:var(--cy-500);box-shadow:0 0 0 3px rgba(47,208,230,.13);background:rgba(0,0,0,.42)}
+.saisie input{flex:1;min-width:0;padding:14px 0;border:0;outline:0;background:transparent;font-size:15.5px;letter-spacing:.01em}
+.saisie input::placeholder{color:var(--txt-4)}
+.saisie .ic{color:var(--txt-3);display:grid;place-items:center;flex:none}
+.saisie.err{border-color:var(--danger);box-shadow:0 0 0 3px rgba(255,77,79,.14)}
+
+/* interrupteur */
+.bascule{display:inline-flex;align-items:center;gap:10px;cursor:pointer;user-select:none}
+.bascule input{position:absolute;opacity:0;pointer-events:none}
+.bascule i{width:38px;height:21px;border-radius:21px;background:rgba(0,0,0,.45);border:1px solid var(--verre-bord);
+  position:relative;transition:all var(--t-moyen) var(--e);flex:none}
+.bascule i::after{content:"";position:absolute;top:2px;left:2px;width:15px;height:15px;border-radius:50%;
+  background:var(--g-50);transition:all var(--t-moyen) var(--e)}
+.bascule input:checked + i{background:rgba(47,208,230,.3);border-color:var(--cy-500)}
+.bascule input:checked + i::after{left:19px;background:var(--cy-300)}
+.bascule input:focus-visible + i{outline:2px solid var(--cy-400);outline-offset:2px}
+
+/* case à cocher de couche */
+.ligne-couche{
+  display:flex;align-items:center;gap:11px;padding:8px 10px;border-radius:9px;cursor:pointer;
+  transition:background var(--t-court) var(--e);font-size:14px;
+}
+.ligne-couche:hover{background:var(--verre-2)}
+.ligne-couche input{position:absolute;opacity:0;pointer-events:none}
+.ligne-couche .boite{
+  width:17px;height:17px;border-radius:5px;border:1.5px solid var(--verre-bord-fort);flex:none;
+  display:grid;place-items:center;transition:all var(--t-court) var(--e);
+}
+.ligne-couche .boite svg{opacity:0;transform:scale(.5);transition:all var(--t-court) var(--e)}
+.ligne-couche input:checked + .boite{background:var(--cy-400);border-color:var(--cy-400)}
+.ligne-couche input:checked + .boite svg{opacity:1;transform:scale(1)}
+.ligne-couche input[type=radio] + .boite{border-radius:50%}
+.ligne-couche input:focus-visible + .boite{outline:2px solid var(--cy-400);outline-offset:2px}
+.pastille{width:10px;height:10px;border-radius:3px;flex:none;box-shadow:0 0 0 1px rgba(0,0,0,.4)}
+
+/* curseur */
+input[type=range]{-webkit-appearance:none;appearance:none;height:22px;background:transparent;cursor:pointer}
+input[type=range]::-webkit-slider-runnable-track{height:4px;border-radius:4px;background:rgba(255,255,255,.14)}
+input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:16px;height:16px;margin-top:-6px;border-radius:50%;
+  background:var(--cy-300);box-shadow:0 0 0 4px rgba(47,208,230,.18),0 2px 6px rgba(0,0,0,.5);
+  transition:box-shadow var(--t-court) var(--e)}
+input[type=range]:hover::-webkit-slider-thumb{box-shadow:0 0 0 7px rgba(47,208,230,.22),0 2px 6px rgba(0,0,0,.5)}
+input[type=range]:focus-visible::-webkit-slider-thumb{box-shadow:0 0 0 7px rgba(47,208,230,.4)}
+
+/* ===========================================================================
+   MARQUES
+   =========================================================================== */
+.marque{display:flex;align-items:center;gap:11px}
+.marque img{height:26px;width:auto;display:block}
+.marque-txt{font-family:var(--police-titre);font-weight:700;font-size:15.5px;letter-spacing:.2em;line-height:1}
+.marque-txt b{color:var(--cy-400);font-weight:700}
+.marque-sous{font-size:10.5px;letter-spacing:.13em;color:var(--txt-3);text-transform:uppercase;margin-top:3px}
+
+/* bandeau d'attribution : l'insigne NASA sert de SOURCE DE DONNÉES,
+   jamais de marque produit — le produit est DEVSEC. */
+.attribution{display:flex;align-items:center;gap:10px;font-size:11.5px;color:var(--txt-3);line-height:1.35}
+.attribution img{height:28px;width:28px;flex:none;border-radius:50%}
+
+/* ===========================================================================
+   ÉTATS DE SÉCURITÉ
+   =========================================================================== */
+.etat{--c:var(--sur);position:relative;border-left:3px solid var(--c);padding-left:13px}
+.etat[data-n=prudence]{--c:var(--prudence)}
+.etat[data-n=limite],.etat[data-n=danger]{--c:var(--danger)}
+.etat[data-n=info]{--c:var(--txt-4)}
+.puce-etat{width:8px;height:8px;border-radius:50%;background:var(--c);flex:none;
+  box-shadow:0 0 0 3px color-mix(in srgb,var(--c) 22%,transparent)}
+
+.pulsation{animation:pulsation 1.9s var(--e) infinite}
+@keyframes pulsation{0%,100%{opacity:1}50%{opacity:.45}}
+.battement{animation:battement 1.25s var(--e) infinite}
+@keyframes battement{0%,100%{box-shadow:0 0 0 0 rgba(255,77,79,.5)}60%{box-shadow:0 0 0 14px rgba(255,77,79,0)}}
+
+/* apparition de panneau */
+.entre{animation:entre var(--t-moyen) var(--e) both}
+@keyframes entre{from{opacity:0;transform:translateY(10px) scale(.99)}to{opacity:1;transform:none}}
+.entre-g{animation:entreG var(--t-long) var(--e) both}
+@keyframes entreG{from{opacity:0;transform:translateX(-16px)}to{opacity:1;transform:none}}
+.entre-d{animation:entreD var(--t-long) var(--e) both}
+@keyframes entreD{from{opacity:0;transform:translateX(16px)}to{opacity:1;transform:none}}
+
+@media (prefers-reduced-motion:reduce){
+  *,*::before,*::after{animation-duration:.01ms!important;animation-iteration-count:1!important;
+    transition-duration:.01ms!important}
+}
+
+/* ===========================================================================
+   FOND — grille d'instrument + halo, sous le verre
+   =========================================================================== */
+.fond-grille{position:fixed;inset:0;z-index:0;pointer-events:none;overflow:hidden}
+.fond-grille::before{
+  content:"";position:absolute;inset:-2px;
+  background-image:linear-gradient(rgba(255,255,255,.028) 1px,transparent 1px),
+                   linear-gradient(90deg,rgba(255,255,255,.028) 1px,transparent 1px);
+  background-size:68px 68px;
+  mask-image:radial-gradient(ellipse 85% 70% at 50% 40%,#000 25%,transparent 78%);
+  -webkit-mask-image:radial-gradient(ellipse 85% 70% at 50% 40%,#000 25%,transparent 78%);
+}
+.fond-grille::after{
+  content:"";position:absolute;width:62vw;height:62vw;left:-16vw;top:-22vw;border-radius:50%;
+  background:radial-gradient(circle,rgba(17,178,204,.11),transparent 68%);filter:blur(28px);
+}

@@ -1,0 +1,721 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Martian Map — planification de sortie à pied</title>
+<link rel="stylesheet" href="leaflet/leaflet.css"
+      onerror="this.onerror=null;this.href='https://unpkg.com/leaflet@1.9.4/dist/leaflet.css'">
+<style>
+:root{
+  --bg:#1B1512; --bg2:#231B16; --panel:#2A201B; --bord:#3C2E26;
+  --txt:#F6F0E8; --muted:#B9A99B; --accent:#E59A6B; --danger:#B5462A;
+  --ok:#86B07A; --warn:#E0A33C; --curio:#7FB3D5; --creux:#4C8CE6;
+  --r:10px;
+}
+*{box-sizing:border-box}
+html,body{height:100%;margin:0}
+body{background:var(--bg);color:var(--txt);
+  font:15px/1.45 "Segoe UI",system-ui,-apple-system,Roboto,Helvetica,Arial,sans-serif;
+  -webkit-font-smoothing:antialiased;overflow:hidden}
+button{font:inherit;color:inherit;cursor:pointer;border:0;background:none}
+h1,h2,h3{margin:0;font-weight:600}
+.chiffre{font-variant-numeric:tabular-nums}
+
+/* ---------- ossature ---------- */
+#app{display:grid;grid-template-rows:auto 1fr;height:100%}
+#app[hidden]{display:none}
+main{display:grid;grid-template-rows:1fr;min-height:0;position:relative}
+main>section{grid-area:1/1;min-height:0}
+header{display:flex;align-items:center;gap:18px;padding:10px 16px;
+  background:var(--bg2);border-bottom:1px solid var(--bord)}
+.brand{font-size:17px;font-weight:700;letter-spacing:.13em}
+.brand b{color:var(--accent)}
+.brand span{display:block;font-size:11.5px;font-weight:400;letter-spacing:.04em;color:var(--muted)}
+nav{display:flex;gap:6px;background:#1B1512;padding:4px;border-radius:var(--r);border:1px solid var(--bord)}
+nav button{padding:7px 15px;border-radius:7px;font-size:13.5px;color:var(--muted)}
+nav button[aria-selected=true]{background:var(--accent);color:#1B1512;font-weight:600}
+.tag{margin-left:auto;font-size:11.5px;color:var(--muted);text-align:right;line-height:1.3}
+
+/* ---------- écran 1 : planification ---------- */
+#plan{display:grid;grid-template-columns:1fr 372px;grid-template-rows:1fr auto;
+  grid-template-areas:"carte panneau" "conditions panneau";min-height:0}
+#map{grid-area:carte;background:#12100E;min-height:0}
+#conditions{grid-area:conditions;background:var(--bg2);border-top:1px solid var(--bord);padding:10px 16px}
+#panneau{grid-area:panneau;background:var(--bg2);border-left:1px solid var(--bord);
+  overflow-y:auto;padding:14px;display:flex;flex-direction:column;gap:12px}
+
+/* contrôle des couches, posé sur la carte */
+#couches{position:absolute;top:12px;left:12px;z-index:620;width:252px;
+  background:#1B1512ef;border:1px solid var(--bord);border-radius:var(--r);padding:12px 13px;
+  backdrop-filter:blur(3px)}
+#couches h3{font-size:11px;letter-spacing:.11em;color:var(--muted);text-transform:uppercase;margin-bottom:7px}
+#couches h3+h3{margin-top:12px}
+#couches label{display:flex;align-items:center;gap:8px;padding:3px 0;font-size:13.5px;cursor:pointer}
+#couches input{accent-color:var(--accent);width:15px;height:15px;margin:0;flex:none}
+.pastille{width:11px;height:11px;border-radius:3px;flex:none}
+.opa{margin-top:10px;display:flex;align-items:center;gap:8px;font-size:12px;color:var(--muted)}
+.opa input{flex:1;accent-color:var(--accent)}
+#legende{margin-top:11px;padding-top:10px;border-top:1px solid var(--bord);font-size:11.5px;color:var(--muted)}
+#legende div{display:flex;align-items:center;gap:7px;padding:1.5px 0}
+
+/* panneau mission */
+.carte-info{background:var(--panel);border:1px solid var(--bord);border-radius:var(--r);padding:12px 13px}
+.titre-sec{font-size:11px;letter-spacing:.11em;color:var(--muted);text-transform:uppercase;margin-bottom:9px}
+.grille{display:grid;grid-template-columns:1fr 1fr;gap:9px 12px}
+.kpi .v{font-size:19px;font-weight:650;line-height:1.15}
+.kpi .l{font-size:11px;color:var(--muted)}
+.kpi .v small{font-size:12px;font-weight:400;color:var(--muted)}
+#profil{width:100%;height:84px;display:block;margin-top:4px}
+.etape{display:grid;grid-template-columns:26px 1fr;gap:10px;padding:9px;border-radius:9px;
+  border:1px solid transparent;cursor:pointer;text-align:left;width:100%}
+.etape:hover{background:#ffffff0d}
+.etape[aria-current=true]{border-color:var(--accent);background:#E59A6B14}
+.puce{width:26px;height:26px;border-radius:50%;display:grid;place-items:center;
+  font-size:12px;font-weight:700;background:var(--bord);color:var(--txt)}
+.etape[data-type=habitat] .puce{background:var(--txt);color:#1B1512}
+.etape[data-type=crête] .puce{background:var(--accent);color:#1B1512}
+.etape[data-type=creux] .puce{background:var(--creux);color:#fff}
+.etape .nom{font-size:14px;font-weight:600}
+.etape .det{font-size:12px;color:var(--muted);margin-top:2px}
+.etape .sci{font-size:11.5px;color:var(--accent);margin-top:3px}
+.bouton-primaire{width:100%;padding:13px;border-radius:var(--r);background:var(--accent);color:#1B1512;
+  font-weight:700;font-size:15px;letter-spacing:.02em}
+.bouton-primaire:hover{filter:brightness(1.08)}
+.bouton-second{padding:9px 14px;border-radius:9px;border:1px solid var(--bord);color:var(--muted);font-size:13px}
+.bouton-second:hover{color:var(--txt);border-color:var(--accent)}
+
+/* conditions */
+.cond-tete{display:flex;align-items:baseline;gap:12px;margin-bottom:8px}
+.cond-tete h3{font-size:11px;letter-spacing:.11em;color:var(--muted);text-transform:uppercase}
+.cond-maj{font-size:11.5px;color:var(--muted)}
+#mesures{display:flex;gap:10px;flex-wrap:wrap}
+.mesure{flex:1 1 150px;background:var(--panel);border:1px solid var(--bord);border-left:3px solid var(--ok);
+  border-radius:8px;padding:7px 10px}
+.mesure[data-etat=info]{border-left-color:var(--muted)}
+.mesure .n{font-size:10.5px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em}
+.mesure .v{font-size:15px;font-weight:650;margin:1px 0}
+.mesure .d{font-size:10.5px;color:var(--muted);line-height:1.3}
+#sources{margin-top:8px;font-size:11.5px;color:var(--muted)}
+#sources summary{cursor:pointer}
+#sources ul{margin:6px 0 0;padding-left:18px}
+
+/* ---------- écran 2 : mode marche ---------- */
+#marche{display:none;grid-template-rows:auto 1fr auto;height:100%;background:#120F0D}
+#marche.actif{display:grid}
+.hud-tete{display:flex;align-items:center;gap:16px;padding:14px 26px;border-bottom:1px solid var(--bord)}
+.hud-tete .et{font-size:11px;letter-spacing:.14em;color:var(--muted);text-transform:uppercase}
+.hud-tete .pt{font-size:26px;font-weight:700;line-height:1.1}
+.hud-tete .pt small{display:block;font-size:12.5px;font-weight:400;color:var(--accent);letter-spacing:.02em}
+.hud-corps{display:grid;grid-template-columns:repeat(3,minmax(260px,1fr));
+  align-items:center;justify-items:center;align-content:center;gap:22px 44px;padding:14px 26px;
+  min-height:0;max-width:1240px;width:100%;margin:0 auto}
+.hud-corps>*{width:100%;max-width:330px}
+#boussole{width:100%;max-width:256px;margin:0 auto;display:block}
+.gros{text-align:center}
+.gros .v{font-size:84px;font-weight:700;line-height:.95;letter-spacing:-.02em}
+.gros .v small{font-size:26px;font-weight:500;color:var(--muted);letter-spacing:0}
+.gros .l{font-size:12.5px;letter-spacing:.1em;color:var(--muted);text-transform:uppercase;margin-top:6px}
+.gros.sec .v{font-size:46px}
+.pile{display:flex;flex-direction:column;gap:14px;justify-content:center}
+#alerte{border-radius:12px;padding:14px 18px;border:2px solid var(--ok);background:#86B07A1a}
+#alerte .e{font-size:12.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--ok);font-weight:700}
+#alerte .p{font-size:40px;font-weight:700;line-height:1.05}
+#alerte .t{font-size:12.5px;color:var(--muted);margin-top:2px}
+#alerte[data-n=prudence]{border-color:var(--warn);background:#E0A33C1a}
+#alerte[data-n=prudence] .e{color:var(--warn)}
+#alerte[data-n=limite]{border-color:var(--danger);background:#B5462A26;animation:bat 1.4s infinite}
+#alerte[data-n=limite] .e{color:#F08A66}
+@keyframes bat{50%{background:#B5462A0d}}
+#minicarte{width:100%;max-width:236px;display:block;margin:0 auto;height:auto;background:#1B1512;
+  border:1px solid var(--bord);border-radius:12px}
+.hud-pied{padding:12px 26px 16px;border-top:1px solid var(--bord)}
+.barre{height:7px;border-radius:4px;background:var(--bord);overflow:hidden;margin-bottom:10px}
+.barre i{display:block;height:100%;background:var(--accent);width:0}
+.cmd{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+.cmd input[type=range]{flex:1;min-width:180px;accent-color:var(--accent)}
+.cmd .info{font-size:12.5px;color:var(--muted);min-width:170px}
+kbd{font:11px/1 ui-monospace,monospace;border:1px solid var(--bord);border-bottom-width:2px;
+  border-radius:4px;padding:3px 5px;color:var(--muted)}
+
+/* divers */
+#attente{position:fixed;inset:0;display:grid;place-items:center;background:var(--bg);z-index:900;
+  text-align:center;padding:30px}
+#attente .boite{max-width:620px}
+#attente code{background:var(--panel);padding:2px 7px;border-radius:5px;color:var(--accent);
+  font:13px/1.6 ui-monospace,monospace}
+.leaflet-container{background:#12100E}
+.leaflet-bar,.leaflet-bar a{background:#1B1512;color:var(--txt);border-color:var(--bord)}
+.leaflet-bar a:hover{background:var(--panel);color:var(--accent)}
+.leaflet-control-attribution{background:#1B1512cc!important;color:var(--muted)!important;font-size:10.5px}
+.leaflet-control-attribution a{color:var(--muted)!important}
+.etiq{background:#1B1512e8;border:1px solid var(--bord);color:var(--txt);font-size:12px;
+  font-weight:600;padding:3px 7px;border-radius:6px;box-shadow:none}
+.etiq::before{display:none}
+@media (max-width:1100px){
+  body{overflow:auto}
+  #plan{grid-template-columns:1fr;grid-template-areas:"carte" "panneau" "conditions"}
+  #map{height:58vh}
+  #panneau{border-left:0;border-top:1px solid var(--bord)}
+  .hud-corps{grid-template-columns:1fr}
+  .gros .v{font-size:60px}
+}
+</style>
+</head>
+<body>
+
+<div id="attente"><div class="boite">
+  <h1>Martian Map</h1>
+  <p id="attente-txt" style="color:#B9A99B">Chargement des données de mission…</p>
+</div></div>
+
+<div id="app" hidden>
+  <header>
+    <div class="brand">MARTIAN<b>MAP</b>
+      <span id="sous-titre">mont Sharp · cratère Gale</span></div>
+    <nav role="tablist">
+      <button role="tab" data-mode="plan" aria-selected="true">Planification</button>
+      <button role="tab" data-mode="marche" aria-selected="false">Mode marche</button>
+    </nav>
+    <div class="tag">Même lien pour le rover, l'orbite et la Terre<br>
+      Données NASA · USGS · MSL (Curiosity)</div>
+  </header>
+
+  <main>
+    <!-- ======================= ÉCRAN 1 ======================= -->
+    <section id="plan">
+      <div id="map"></div>
+
+      <div id="couches">
+        <h3>Fond de carte</h3>
+        <div id="fonds"></div>
+        <h3>Couches</h3>
+        <div id="surcouches"></div>
+        <div class="opa"><span>Opacité</span><input type="range" id="opacite" min="0" max="100" value="100"><span id="opacite-v">100 %</span></div>
+        <div id="legende">
+          <div><span class="pastille" style="background:#3CB44B"></span>Pente &lt; 10° — marche facile</div>
+          <div><span class="pastille" style="background:#E0A33C"></span>10° à 20° — prudence</div>
+          <div><span class="pastille" style="background:#B5462A"></span>&gt; 20° ou blocs — interdit</div>
+          <div><span class="pastille" style="background:#7FB3D5"></span>Trajet de Curiosity (sols 4534–4830)</div>
+        </div>
+      </div>
+
+      <aside id="panneau">
+        <div class="carte-info">
+          <div class="titre-sec">Sortie à pied — bilan</div>
+          <div class="grille" id="kpi"></div>
+          <svg id="profil" viewBox="0 0 340 84" preserveAspectRatio="none" aria-label="Profil d'altitude"></svg>
+          <div style="font-size:11px;color:var(--muted);margin-top:2px">
+            Profil d'altitude ; le ruban du bas donne la classe de danger du terrain.
+          </div>
+        </div>
+
+        <div class="carte-info" style="padding:8px">
+          <div class="titre-sec" style="padding:4px 5px 0">Déroulé de la mission</div>
+          <div id="etapes"></div>
+        </div>
+
+        <button class="bouton-primaire" id="vers-marche">Passer en mode marche →</button>
+        <div style="font-size:11.5px;color:var(--muted)">
+          Hypothèses réglables : vitesse en combinaison × <b id="h-facteur">0,5</b> de la règle de Tobler ;
+          seuils de pente <b id="h-seuils">10° / 20°</b> ; dose RAD <b id="h-dose">0,67 mSv/jour</b>.
+        </div>
+      </aside>
+
+      <footer id="conditions">
+        <div class="cond-tete">
+          <h3>Conditions</h3>
+          <div class="cond-maj" id="cond-maj"></div>
+        </div>
+        <div id="mesures"></div>
+        <details id="sources"><summary>Sources des données</summary><ul id="liste-sources"></ul></details>
+      </footer>
+    </section>
+
+    <!-- ======================= ÉCRAN 2 ======================= -->
+    <section id="marche">
+      <div class="hud-tete">
+        <div>
+          <div class="et" id="m-etape">Étape 1 sur 3</div>
+          <div class="pt" id="m-point">Cible A<small id="m-science"></small></div>
+        </div>
+        <button class="bouton-second" style="margin-left:auto" id="vers-plan">← Planification</button>
+      </div>
+
+      <div class="hud-corps">
+        <div>
+          <svg id="boussole" viewBox="0 0 200 200" aria-label="Cap à suivre"></svg>
+          <div class="gros" style="margin-top:4px">
+            <div class="l">Cap à suivre <span id="m-cap-txt"></span></div>
+          </div>
+        </div>
+
+        <div class="pile">
+          <div class="gros"><div class="v chiffre" id="m-dist">0<small> m</small></div>
+            <div class="l">jusqu'au prochain point</div></div>
+          <div class="gros sec"><div class="v chiffre" id="m-temps">0<small> min</small></div>
+            <div class="l">temps estimé jusqu'au point</div></div>
+        </div>
+
+        <div class="pile">
+          <div id="alerte" data-n="ok">
+            <div class="e" id="a-etat">Terrain facile</div>
+            <div class="p chiffre" id="a-pente">0,0°</div>
+            <div class="t" id="a-txt">pente locale</div>
+          </div>
+          <div class="gros sec"><div class="v chiffre" id="m-retour">0<small> min</small></div>
+            <div class="l">retour à l'habitat</div></div>
+          <div><svg id="minicarte" viewBox="0 0 200 200" aria-label="Position sur l'itinéraire"></svg>
+            <div class="l" style="font-size:11px;letter-spacing:.08em;color:var(--muted);
+              text-transform:uppercase;text-align:center;margin-top:5px">Position sur l'itinéraire</div></div>
+        </div>
+      </div>
+
+      <div class="hud-pied">
+        <div class="barre"><i id="m-barre"></i></div>
+        <div class="cmd">
+          <button class="bouton-second" id="m-recul">− 25 m</button>
+          <button class="bouton-second" id="m-lecture">▶ Lecture</button>
+          <button class="bouton-second" id="m-avance">Avancer + 25 m</button>
+          <input type="range" id="m-curseur" min="0" max="1000" value="0" aria-label="Position sur l'itinéraire">
+          <div class="info chiffre" id="m-info"></div>
+          <div class="info" style="min-width:0">
+            <kbd>←</kbd> <kbd>→</kbd> avancer · <kbd>espace</kbd> lecture · <kbd>échap</kbd> retour
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+</div>
+
+<!-- Données de mission : mission.js permet l'ouverture directe du fichier (file://) ;
+     sinon app.html lit mission.json par fetch(). -->
+<script src="mission.js" onerror="this.remove()"></script>
+<script>
+/* ============================================================================
+   Martian Map — un seul outil, deux écrans.
+   Toutes les données viennent de mission.json (produit par martian_map_pipeline.py).
+   ========================================================================= */
+const R_MARS = 3396190;
+const COUL = {ok:'#86B07A', prudence:'#E0A33C', limite:'#B5462A'};
+let M, IT, N, demarre = false;
+let posM = 0, lecture = null, mapL = null, couchesL = {}, marqueurPos = null, etapeActive = -1;
+
+const fr = (x, d = 0) => x.toLocaleString('fr-FR', {minimumFractionDigits: d, maximumFractionDigits: d});
+const el = id => document.getElementById(id);
+
+/* --- géométrie Mars (équirectangulaire locale) --- */
+const rad = Math.PI / 180;
+function metres(a, b) {
+  const dx = R_MARS * (b[0] - a[0]) * rad * Math.cos((a[1] + b[1]) / 2 * rad);
+  const dy = R_MARS * (b[1] - a[1]) * rad;
+  return Math.hypot(dx, dy);
+}
+function capDeg(a, b) {
+  const dx = R_MARS * (b[0] - a[0]) * rad * Math.cos((a[1] + b[1]) / 2 * rad);
+  const dy = R_MARS * (b[1] - a[1]) * rad;
+  return (Math.atan2(dx, dy) / rad + 360) % 360;
+}
+const ROSE = ['N','NNE','NE','ENE','E','ESE','SE','SSE','S','SSO','SO','OSO','O','ONO','NO','NNO'];
+const rose = c => ROSE[Math.round(c / 22.5) % 16];
+
+/* --- interpolation le long de l'itinéraire, par distance parcourue --- */
+function indexDist(s) {
+  const D = IT.distance_cum_m;
+  let lo = 0, hi = D.length - 1;
+  while (hi - lo > 1) { const m = (lo + hi) >> 1; (D[m] <= s) ? lo = m : hi = m; }
+  return lo;
+}
+function etat(s) {
+  const D = IT.distance_cum_m, C = IT.coordinates;
+  s = Math.max(0, Math.min(s, D[D.length - 1]));
+  const i = indexDist(s), j = Math.min(i + 1, D.length - 1);
+  const f = D[j] > D[i] ? (s - D[i]) / (D[j] - D[i]) : 0;
+  const mix = (A) => A[i] + (A[j] - A[i]) * f;
+  return {
+    s, i,
+    lon: C[i][0] + (C[j][0] - C[i][0]) * f,
+    lat: C[i][1] + (C[j][1] - C[i][1]) * f,
+    alt: mix(IT.altitude_m),
+    pente: mix(IT.pente_deg),
+    t: mix(IT.temps_cum_s)            // secondes, vitesse de référence (Tobler)
+  };
+}
+/* cap : on suit l'itinéraire validé, pas la ligne droite vers la cible */
+function capSuivi(s) {
+  const e = etat(s), f = etat(Math.min(s + 20, IT.distance_cum_m[IT.distance_cum_m.length - 1] - 0.1));
+  return metres([e.lon, e.lat], [f.lon, f.lat]) < 0.5 ? IT.cap_deg[e.i] : capDeg([e.lon, e.lat], [f.lon, f.lat]);
+}
+const minutes = s => s / 60 / M.stats.facteur_prudent;   // temps prudent (hypothèse combinaison)
+function niveau(p) {
+  if (p >= M.seuils.interdit_deg - 3) return 'limite';
+  if (p >= M.seuils.prudence_deg) return 'prudence';
+  return 'ok';
+}
+
+/* ========================== ÉCRAN 1 : CARTE ============================= */
+function construireCarte() {
+  const b = M.bounds;
+  mapL = L.map('map', {crs: L.CRS.EPSG4326, attributionControl: true, zoomControl: false, maxZoom: 24});
+  L.control.zoom({position: 'bottomright'}).addTo(mapL);
+  mapL.fitBounds(b);
+  mapL.attributionControl.addAttribution(
+    'NASA/JPL-Caltech · USGS Astrogeology · MSL (Curiosity)');
+
+  const fonds = el('fonds'), surc = el('surcouches');
+  const ligne = (type, id, nom, actif, pastille) => {
+    const l = document.createElement('label');
+    l.innerHTML = `<input type="${type === 'base' ? 'radio' : 'checkbox'}"
+        ${type === 'base' ? 'name="fond"' : ''} ${actif ? 'checked' : ''} data-id="${id}">
+      ${pastille ? `<span class="pastille" style="background:${pastille}"></span>` : ''}
+      <span>${nom}</span>`;
+    (type === 'base' ? fonds : surc).appendChild(l);
+    return l.querySelector('input');
+  };
+
+  // couches raster déclarées dans mission.json
+  M.couches.forEach((c, k) => {
+    const actif = c.type === 'base' ? k === 0 : !!c.defaut;
+    const o = L.imageOverlay(c.fichier, b, {opacity: c.opacite, className: 'c-' + c.id});
+    couchesL[c.id] = {obj: o, conf: c};
+    if (actif) o.addTo(mapL);
+    ligne(c.type, c.id, c.nom, actif).onchange = e => basculer(c.id, e.target.checked, c.type);
+  });
+
+  // couches vectorielles
+  const route = IT.coordinates.map(p => [p[1], p[0]]);
+  couchesL.itineraire = {obj: L.layerGroup([
+    L.polyline(route, {color: '#1B1512', weight: 8, opacity: .55}),
+    L.polyline(route, {color: '#F6F0E8', weight: 4, dashArray: '9 6'})
+  ]), conf: {}};
+  couchesL.curiosity = {obj: L.polyline(
+    M.waypoints_curiosity.coordinates.map(p => [p[1], p[0]]),
+    {color: '#7FB3D5', weight: 2, opacity: .9}), conf: {}};
+  couchesL.itineraire.obj.addTo(mapL);
+  ligne('over', 'itineraire', 'Itinéraire le plus rapide et sûr', true, '#F6F0E8')
+    .onchange = e => basculer('itineraire', e.target.checked);
+  ligne('over', 'curiosity', `Trajet de Curiosity (${M.waypoints_curiosity.n} positions)`, false, '#7FB3D5')
+    .onchange = e => basculer('curiosity', e.target.checked);
+
+  // points de mission
+  const pin = (p, nom, coul, remplissage) => L.circleMarker([p.lat, p.lon], {
+      radius: 9, color: coul, weight: 3, fillColor: remplissage, fillOpacity: 1})
+    .addTo(mapL).bindTooltip(nom, {permanent: true, direction: 'right', className: 'etiq', offset: [10, 0]});
+  pin(M.habitat, 'Habitat', '#F6F0E8', '#1B1512');
+  M.cibles.forEach(c => pin(c, c.nom, c.nature === 'creux' ? '#4C8CE6' : '#E59A6B', '#1B1512'));
+
+  marqueurPos = L.circleMarker([M.habitat.lat, M.habitat.lon],
+    {radius: 7, color: '#1B1512', weight: 2, fillColor: '#E59A6B', fillOpacity: 1});
+
+  el('opacite').oninput = e => {
+    const v = +e.target.value / 100;
+    el('opacite-v').textContent = Math.round(v * 100) + ' %';
+    M.couches.forEach(c => { if (c.type !== 'base' && mapL.hasLayer(couchesL[c.id].obj))
+      couchesL[c.id].obj.setOpacity(c.opacite * v); });
+  };
+}
+function basculer(id, actif, type) {
+  const c = couchesL[id];
+  if (type === 'base') {   // un seul fond à la fois
+    M.couches.filter(x => x.type === 'base').forEach(x => mapL.removeLayer(couchesL[x.id].obj));
+    c.obj.addTo(mapL).bringToBack();
+  } else if (actif) {
+    c.obj.addTo(mapL);
+    if (c.conf.opacite) c.obj.setOpacity(c.conf.opacite * (+el('opacite').value / 100));
+  } else mapL.removeLayer(c.obj);
+  if (mapL.hasLayer(couchesL.itineraire.obj)) couchesL.itineraire.obj.eachLayer(l => l.bringToFront());
+}
+
+/* ===================== ÉCRAN 1 : PANNEAU MISSION ======================== */
+function construirePanneau() {
+  const s = M.stats;
+  const kpi = [
+    [fr(s.longueur_km, 2) + ' <small>km</small>', 'distance (boucle)'],
+    [fr(s.temps_prudent_min) + ' <small>min de marche</small>', `${fr(s.temps_ref_min)} min à vitesse de randonnée`],
+    ['+' + fr(s.denivele_m) + ' <small>m</small>', 'dénivelé positif'],
+    [fr(s.pente_max, 1) + '<small>°</small>', `pente maximale · ${fr(s.prudence_pct)} % en prudence`],
+    ['≈ ' + fr(s.dose_msv, 3) + ' <small>mSv</small>', 'dose reçue pendant la marche'],
+    [fr(M.cibles.length) + ' <small>cibles</small>', 'une crête + un creux (boxworks)']
+  ];
+  el('kpi').innerHTML = kpi.map(([v, l]) =>
+    `<div class="kpi"><div class="v chiffre">${v}</div><div class="l">${l}</div></div>`).join('');
+
+  el('h-facteur').textContent = fr(M.stats.facteur_prudent, 1);
+  el('h-seuils').textContent = `${fr(M.seuils.prudence_deg)}° / ${fr(M.seuils.interdit_deg)}°`;
+  el('h-dose').textContent = fr(M.stats.dose_jour, 2) + ' mSv/jour';
+  el('sous-titre').textContent = `${M.site.nom} · zone ${fr(M.site.zone_km, 0)} × ${fr(M.site.zone_km, 0)} km`;
+
+  // étapes
+  const cible = nom => M.cibles.find(c => c.nom === nom);
+  const rangs = [{type: 'habitat', nom: M.habitat.nom, det:
+      `Départ · ${fr(M.habitat.alt_m, 0)} m d'altitude · position réelle de Curiosity au sol ${M.habitat.sol_curiosity}`,
+      sci: '', i: 0, puce: '◆'}];
+  M.etapes.forEach((e, k) => {
+    const c = cible(e.arrivee);
+    rangs.push({
+      type: c ? c.nature : 'habitat', nom: e.arrivee, puce: k + 1, i: k + 1, etape: e,
+      det: `${fr(e.distance_m)} m · ${fr(e.temps_prudent_min)} min · D+ ${fr(e.denivele_pos_m)} m · pente max ${fr(e.pente_max, 1)}°`,
+      sci: c ? `${c.science} · arrêt ${fr(c.duree_arret_min)} min` : 'Fin de sortie — remontée dans le rover pressurisé'
+    });
+  });
+  el('etapes').innerHTML = rangs.map((r, k) => `
+    <button class="etape" data-type="${r.type}" data-k="${k}">
+      <span class="puce">${r.puce}</span>
+      <span><span class="nom">${r.nom}</span>
+        <span class="det">${r.det}</span>
+        ${r.sci ? `<span class="sci">${r.sci}</span>` : ''}</span>
+    </button>`).join('');
+  el('etapes').querySelectorAll('.etape').forEach(b => b.onclick = () => viserEtape(+b.dataset.k));
+
+  // conditions
+  el('cond-maj').textContent = M.conditions.maj;
+  el('mesures').innerHTML = M.conditions.mesures.map(m =>
+    `<div class="mesure" data-etat="${m.etat}"><div class="n">${m.nom}</div>
+      <div class="v chiffre">${m.valeur}</div><div class="d">${m.detail}</div></div>`).join('');
+  el('liste-sources').innerHTML = M.sources.map(s => `<li>${s}</li>`).join('');
+
+  profil();
+}
+
+function viserEtape(k) {
+  etapeActive = k;
+  el('etapes').querySelectorAll('.etape').forEach(b =>
+    b.setAttribute('aria-current', +b.dataset.k === k));
+  if (k === 0) { mapL.setView([M.habitat.lat, M.habitat.lon], mapL.getZoom()); }
+  else {
+    const e = M.etapes[k - 1];
+    const seg = IT.coordinates.slice(e.i_debut, e.i_fin + 1).map(p => [p[1], p[0]]);
+    mapL.fitBounds(L.latLngBounds(seg).pad(0.25));
+  }
+  profil();
+}
+
+/* profil d'altitude + ruban de danger */
+function profil(curseur = null) {
+  const svg = el('profil'), W = 340, H = 84, hb = 8;
+  const D = IT.distance_cum_m, A = IT.altitude_m, P = IT.pente_deg;
+  const dmax = D[D.length - 1], amin = Math.min(...A), amax = Math.max(...A);
+  const x = d => d / dmax * W, y = a => 4 + (1 - (a - amin) / (amax - amin || 1)) * (H - hb - 10);
+  let ligne = '', ruban = '';
+  D.forEach((d, i) => ligne += `${i ? 'L' : 'M'}${x(d).toFixed(1)} ${y(A[i]).toFixed(1)}`);
+  for (let i = 0; i < D.length - 1; i++)
+    ruban += `<rect x="${x(D[i]).toFixed(1)}" y="${H - hb}" width="${Math.max(x(D[i + 1]) - x(D[i]), .8).toFixed(1)}"
+       height="${hb}" fill="${COUL[niveau(P[i])]}"/>`;
+  let marques = '';
+  (etapeActive > 0 ? [M.etapes[etapeActive - 1]] : M.etapes).forEach(e => {
+    if (etapeActive > 0) marques += `<rect x="${x(D[e.i_debut]).toFixed(1)}" y="0"
+      width="${(x(D[e.i_fin]) - x(D[e.i_debut])).toFixed(1)}" height="${H}" fill="#E59A6B1f"/>`;
+    marques += `<line x1="${x(D[e.i_fin]).toFixed(1)}" y1="0" x2="${x(D[e.i_fin]).toFixed(1)}" y2="${H - hb}"
+      stroke="#B9A99B" stroke-width=".8" stroke-dasharray="3 3"/>`;
+  });
+  const cur = curseur === null ? '' :
+    `<line x1="${x(curseur).toFixed(1)}" y1="0" x2="${x(curseur).toFixed(1)}" y2="${H - hb}"
+       stroke="#E59A6B" stroke-width="2"/>`;
+  svg.innerHTML = `${marques}
+    <path d="${ligne}L${W} ${H - hb}L0 ${H - hb}Z" fill="#E59A6B1a"/>
+    <path d="${ligne}" fill="none" stroke="#E59A6B" stroke-width="1.6"/>
+    ${ruban}${cur}
+    <text x="2" y="11" fill="#B9A99B" font-size="9">${fr(amax, 0)} m</text>
+    <text x="2" y="${H - hb - 2}" fill="#B9A99B" font-size="9">${fr(amin, 0)} m</text>
+    <text x="${W - 2}" y="${H - hb - 2}" fill="#B9A99B" font-size="9" text-anchor="end">${fr(dmax, 0)} m</text>`;
+}
+
+/* ======================= ÉCRAN 2 : MODE MARCHE ========================== */
+function construireHud() {
+  el('m-curseur').max = Math.round(IT.distance_cum_m[IT.distance_cum_m.length - 1]);
+  el('m-avance').onclick = () => deplacer(posM + 25);
+  el('m-recul').onclick = () => deplacer(posM - 25);
+  el('m-curseur').oninput = e => deplacer(+e.target.value);
+  el('m-lecture').onclick = basculerLecture;
+}
+function basculerLecture() {
+  if (lecture) { clearInterval(lecture); lecture = null; el('m-lecture').textContent = '▶ Lecture'; return; }
+  el('m-lecture').textContent = '❚❚ Pause';
+  lecture = setInterval(() => {
+    const fin = IT.distance_cum_m[IT.distance_cum_m.length - 1];
+    if (posM >= fin) return basculerLecture();
+    deplacer(posM + 8);
+  }, 120);
+}
+function deplacer(s) {
+  const fin = IT.distance_cum_m[IT.distance_cum_m.length - 1];
+  posM = Math.max(0, Math.min(s, fin));
+  majHud();
+}
+function majHud() {
+  const e = etat(posM), fin = IT.distance_cum_m[IT.distance_cum_m.length - 1];
+  const D = IT.distance_cum_m;
+
+  // étape courante = première étape dont l'arrivée est devant nous
+  let k = M.etapes.findIndex(x => D[x.i_fin] > posM + 0.01);
+  if (k < 0) k = M.etapes.length - 1;
+  const et = M.etapes[k], cibleEt = M.cibles.find(c => c.nom === et.arrivee);
+
+  el('m-etape').textContent = `Étape ${k + 1} sur ${M.etapes.length}`;
+  el('m-point').innerHTML = `${et.arrivee}<small>${cibleEt ? cibleEt.science : 'Retour au rover pressurisé'}</small>`;
+
+  const dRest = Math.max(0, D[et.i_fin] - posM);
+  const tRest = Math.max(0, minutes(IT.temps_cum_s[et.i_fin] - e.t));
+  el('m-dist').innerHTML = `${fr(dRest)}<small> m</small>`;
+  el('m-temps').innerHTML = `${fr(Math.max(tRest, dRest > 0 ? 1 : 0))}<small> min</small>`;
+
+  // retour à l'habitat : marche restante + arrêts scientifiques restants
+  const arretsRestants = M.cibles
+    .filter(c => { const ee = M.etapes.find(x => x.arrivee === c.nom); return ee && D[ee.i_fin] > posM; })
+    .reduce((a, c) => a + c.duree_arret_min, 0);
+  const tHab = minutes(IT.temps_cum_s[IT.temps_cum_s.length - 1] - e.t) + arretsRestants;
+  el('m-retour').innerHTML = `${fr(tHab)}<small> min</small>`;
+
+  // cap
+  const cap = capSuivi(posM);
+  el('m-cap-txt').textContent = `${fr(cap)}° ${rose(cap)}`;
+  boussole(cap, e.pente);
+
+  // alerte de pente
+  const n = niveau(e.pente);
+  el('alerte').dataset.n = n;
+  el('a-etat').textContent = n === 'ok' ? 'Terrain facile'
+    : n === 'prudence' ? 'Prudence' : 'Pente forte';
+  el('a-pente').textContent = fr(e.pente, 1) + '°';
+  el('a-txt').textContent = n === 'ok' ? `pente locale · seuil de prudence ${fr(M.seuils.prudence_deg)}°`
+    : n === 'prudence' ? `pente locale · au-delà de ${fr(M.seuils.prudence_deg)}°, pas lents`
+    : `pente locale · limite de sécurité ${fr(M.seuils.interdit_deg)}° — cherchez un appui`;
+
+  // progression, dose, position
+  el('m-barre').style.width = (posM / fin * 100) + '%';
+  el('m-curseur').value = Math.round(posM);
+  const hEcoul = minutes(e.t) / 60 + (M.cibles.reduce((a, c) => a + c.duree_arret_min, 0) - arretsRestants) / 60;
+  el('m-info').textContent = `${fr(posM)} / ${fr(fin)} m · ${fr(e.alt, 0)} m d'altitude · `
+    + `dose ≈ ${fr(M.stats.dose_jour * hEcoul / M.stats.duree_sol_h, 3)} mSv`;
+  minicarte(e, cap);
+  if (mapL) {
+    marqueurPos.setLatLng([e.lat, e.lon]);
+    if (!mapL.hasLayer(marqueurPos)) marqueurPos.addTo(mapL);
+    profil(posM);
+  }
+}
+
+function boussole(cap, pente) {
+  const C = COUL[niveau(pente)];
+  let graduations = '';
+  for (let a = 0; a < 360; a += 15) {
+    const g = a % 90 === 0, r1 = g ? 72 : 78, x1 = 100 + r1 * Math.sin(a * rad), y1 = 100 - r1 * Math.cos(a * rad),
+      x2 = 100 + 86 * Math.sin(a * rad), y2 = 100 - 86 * Math.cos(a * rad);
+    graduations += `<line x1="${x1.toFixed(1)}" y1="${y1.toFixed(1)}" x2="${x2.toFixed(1)}" y2="${y2.toFixed(1)}"
+      stroke="#3C2E26" stroke-width="${g ? 2.5 : 1.2}"/>`;
+  }
+  const lettres = [['N', 0], ['E', 90], ['S', 180], ['O', 270]].map(([t, a]) => {
+    const x = 100 + 60 * Math.sin(a * rad), y = 100 - 60 * Math.cos(a * rad);
+    return `<text x="${x.toFixed(1)}" y="${(y + 4).toFixed(1)}" fill="#B9A99B" font-size="13"
+      text-anchor="middle" font-weight="600">${t}</text>`;
+  }).join('');
+  el('boussole').innerHTML = `
+    <circle cx="100" cy="100" r="92" fill="none" stroke="#3C2E26" stroke-width="1.5"/>
+    ${graduations}${lettres}
+    <g transform="rotate(${cap.toFixed(1)} 100 100)">
+      <path d="M100 20 L119 110 L100 96 L81 110 Z" fill="${C}"/>
+    </g>
+    <circle cx="100" cy="100" r="7" fill="#1B1512" stroke="${C}" stroke-width="2.5"/>`;
+}
+
+let CADRE = null;
+function cadreItineraire() {                       // carre englobant l'itineraire, avec marge
+  const C = IT.coordinates;
+  let x0 = Infinity, x1 = -Infinity, y0 = Infinity, y1 = -Infinity;
+  C.concat([[M.habitat.lon, M.habitat.lat]]).forEach(p => {
+    x0 = Math.min(x0, p[0]); x1 = Math.max(x1, p[0]);
+    y0 = Math.min(y0, p[1]); y1 = Math.max(y1, p[1]);
+  });
+  const cx = (x0 + x1) / 2, cy = (y0 + y1) / 2;
+  const d = Math.max(x1 - x0, (y1 - y0) / Math.cos(cy * rad)) * 1.18 / 2;
+  return [cx - d, cy - d * Math.cos(cy * rad), cx + d, cy + d * Math.cos(cy * rad)];
+}
+function minicarte(e, cap) {
+  const bb = CADRE || (CADRE = cadreItineraire()), W = 200, pad = 12;
+  const x = lon => pad + (lon - bb[0]) / (bb[2] - bb[0]) * (W - 2 * pad);
+  const y = lat => pad + (bb[3] - lat) / (bb[3] - bb[1]) * (W - 2 * pad);
+  const d = IT.coordinates.map((p, i) => `${i ? 'L' : 'M'}${x(p[0]).toFixed(1)} ${y(p[1]).toFixed(1)}`).join('');
+  const wp = M.waypoints_curiosity.coordinates
+    .map((p, i) => `${i ? 'L' : 'M'}${x(p[0]).toFixed(1)} ${y(p[1]).toFixed(1)}`).join('');
+  const cibles = M.cibles.map(c => `<circle cx="${x(c.lon).toFixed(1)}" cy="${y(c.lat).toFixed(1)}" r="4"
+      fill="none" stroke="${c.nature === 'creux' ? '#4C8CE6' : '#E59A6B'}" stroke-width="2"/>`).join('');
+  el('minicarte').innerHTML = `
+    <path d="${wp}" fill="none" stroke="#7FB3D5" stroke-width="1" opacity=".5"/>
+    <path d="${d}" fill="none" stroke="#F6F0E8" stroke-width="1.6" opacity=".85"/>
+    ${cibles}
+    <rect x="${(x(M.habitat.lon) - 4).toFixed(1)}" y="${(y(M.habitat.lat) - 4).toFixed(1)}" width="8" height="8"
+      fill="none" stroke="#F6F0E8" stroke-width="2"/>
+    <g transform="translate(${x(e.lon).toFixed(1)} ${y(e.lat).toFixed(1)}) rotate(${cap.toFixed(1)})">
+      <path d="M0 -8 L5 6 L0 2 L-5 6 Z" fill="${COUL[niveau(e.pente)]}"/></g>
+    <text x="${W - 4}" y="${W - 5}" fill="#B9A99B" font-size="8" text-anchor="end">${fr(M.stats.longueur_km, 2)} km</text>`;
+}
+
+/* ============================== MODES =================================== */
+function mode(m) {
+  document.querySelectorAll('nav button').forEach(b =>
+    b.setAttribute('aria-selected', b.dataset.mode === m));
+  el('plan').style.display = m === 'plan' ? 'grid' : 'none';
+  el('marche').classList.toggle('actif', m === 'marche');
+  if (m === 'plan' && mapL) setTimeout(() => mapL.invalidateSize(), 30);
+  if (m === 'marche') majHud();
+  else if (lecture) basculerLecture();
+}
+
+/* ============================== DÉMARRAGE =============================== */
+function lancer(mission) {
+  M = mission; IT = M.itineraire;
+  el('attente').remove();
+  el('app').hidden = false;
+  construireCarte();
+  construirePanneau();
+  construireHud();
+  deplacer(0);
+  mode('plan');
+  const recadrer = () => { mapL.invalidateSize(); mapL.fitBounds(M.bounds); };
+  requestAnimationFrame(() => requestAnimationFrame(recadrer));
+  window.addEventListener('resize', () => { clearTimeout(window.__t); window.__t = setTimeout(recadrer, 200); });
+  document.querySelectorAll('nav button').forEach(b => b.onclick = () => mode(b.dataset.mode));
+  el('vers-marche').onclick = () => mode('marche');
+  el('vers-plan').onclick = () => mode('plan');
+  document.addEventListener('keydown', ev => {
+    if (!el('marche').classList.contains('actif')) return;
+    if (ev.key === 'ArrowRight') { deplacer(posM + 25); ev.preventDefault(); }
+    if (ev.key === 'ArrowLeft') { deplacer(posM - 25); ev.preventDefault(); }
+    if (ev.key === ' ') { basculerLecture(); ev.preventDefault(); }
+    if (ev.key === 'Escape') mode('plan');
+  });
+}
+function echec(msg) {
+  const a = el('attente');
+  if (!a) return;
+  a.querySelector('.boite').innerHTML = `<h1>Martian Map</h1>
+    <p style="color:#E0A33C">${msg}</p>
+    <p style="color:#B9A99B">Servez le dossier par HTTP, puis rouvrez cette page :</p>
+    <p><code>python -m http.server 8000</code></p>
+    <p style="color:#B9A99B">puis <code>http://localhost:8000/app.html</code></p>`;
+}
+function donnees() {
+  if (window.MISSION) return lancer(window.MISSION);     // mission.js : marche aussi en file://
+  fetch('mission.json').then(r => r.ok ? r.json() : Promise.reject(r.status))
+    .then(lancer)
+    .catch(e => echec(`Impossible de lire <code>mission.json</code> (${e}).`));
+}
+/* Leaflet : copie locale si elle existe, sinon unpkg (besoin du réseau) */
+function chargerLeaflet(fait) {
+  if (window.L) return fait();
+  const s = document.createElement('script');
+  s.src = 'leaflet/leaflet.js';
+  s.onload = fait;
+  s.onerror = () => {
+    const u = document.createElement('script');
+    u.src = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js';
+    u.onload = fait;
+    u.onerror = () => echec('Leaflet introuvable (ni copie locale, ni réseau).');
+    document.head.appendChild(u);
+  };
+  document.head.appendChild(s);
+}
+chargerLeaflet(donnees);
+</script>
+</body>
+</html>

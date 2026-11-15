@@ -1,0 +1,31 @@
+# ===========================================================================
+#  SECRETS — ne doivent JAMAIS partir dans un dépôt, même privé
+# ===========================================================================
+_prive-acces-vps/
+*.pem
+*.key
+id_rsa*
+veline_vps*
+.env
+.env.*
+
+# ===========================================================================
+#  DONNÉES LOURDES
+#  Elles se regénèrent en relançant MartianMap_Colab_v2.ipynb (quelques
+#  minutes). GitHub refuse au-delà de 100 Mo par fichier ; inutile de les
+#  versionner alors que le site n'utilise que les versions allégées.
+# ===========================================================================
+*.tif
+*.tiff
+sortie/sortie/optique.png
+sortie.zip
+
+# ===========================================================================
+#  DIVERS
+# ===========================================================================
+__pycache__/
+*.pyc
+.ipynb_checkpoints/
+.DS_Store
+Thumbs.db
+node_modules/
