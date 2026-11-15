@@ -187,7 +187,7 @@ import { creerTerrain } from './terrain3d.js';
       var p = MM.POSTES[m.role] || {court: m.role};
       return '<div class="msg-l" data-prio="' + m.prio + '">' +
         '<div class="e"><span class="puce-etat etat" data-n="' + m.prio + '" style="border:0;padding:0"></span>' +
-        '<span class="qui">' + p.court + (m.delai_min ? ' · +' + fr(m.delai_min) + ' min' : '') + '</span>' +
+        '<span class="qui">' + p.court + (m.delai_min >= 1 ? ' · +' + fr(m.delai_min) + ' min' : '') + '</span>' +
         '<span class="h">' + MM.heure(m.t) + '</span></div>' +
         (m.sujet ? '<b>' + m.sujet + '</b> — ' : '') + m.texte + '</div>';
     }).join('');
