@@ -277,6 +277,11 @@ import { creerTerrain } from './terrain3d.js';
       var o = $('#ong-marche');
       o.disabled = true; o.style.opacity = '.4';
       o.title = 'Réservé à l\'équipe de surface';
+      var vm = $('#vers-marche');
+      vm.disabled = true;
+      vm.className = 'btn';
+      vm.style.cssText = 'width:100%;opacity:.55';
+      vm.textContent = "Conduite réservée à l'équipe de surface";
     }
     if (POSTE.droits.indexOf('comms') < 0) $('#envois').innerHTML =
       '<span class="vide" style="padding:4px">Poste en écoute seule.</span>';

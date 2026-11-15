@@ -2,8 +2,8 @@
 
 > À donner en premier à une nouvelle session Claude (Claude Code ou claude.ai).
 > **Langue : français.** Réponses brèves, instructions précises pas à pas. Rester honnête sur les hypothèses.
-> Fichiers à joindre avec ce document : `MartianMap_Colab_v2.ipynb`, `martian_map_pipeline.py`,
-> `app.html`, `curiosity_boxworks_waypoints.geojson`, et le contenu du dossier `sortie/` (résultats).
+> Le projet est désormais un dépôt git. Tout est dans le dossier : il suffit de le donner en entier.
+> Point d'entrée du produit : **`site/index.html`** (voir §9).
 
 ---
 
@@ -143,12 +143,16 @@ facteur 0,5 = hypothèse ; couches spectrale (CRISM) et thermique (THEMIS) **non
 - [x] Pipeline de données + carte Leaflet (version 2)
 - [x] Deck de présentation (artefact Slides sur le compte de Gédéon ; exportable en PDF/PPTX depuis Partager › Exporter) :
       contexte, demande, contraintes, livrables, ressources, choix, MVP, validation, technologies, limites
-- [x] **Interface finale `app.html`** : 2 écrans, lit `mission.json` (voir §7) — testée dans Chrome,
-      en HTTP et en double-clic
-- [ ] Mise en ligne GitHub Pages (dépôt public `martian-map`, contenu de `sortie/` à la racine, **sauf**
-      `optique.png` et `*.tif`) – lien : `[À COMPLÉTER]`
+- [x] **Interface v2 `sortie/sortie/app.html`** : 2 écrans, lit `mission.json` (voir §7)
+- [x] **Interface v3 `site/`** : identité DEVSEC, authentification, terrain 3D réel, visière,
+      liaison entre postes (voir §9). C'est **elle** qu'on montre au jury.
+- [x] Dépôt git initialisé, `.gitignore` qui exclut la clé SSH et les fichiers > 100 Mo
+- [x] Site déposé sur le VPS Devs Solutions (zone d'attente `~/martian-map.nouveau`)
+- [ ] **DNS `martian-map.devs-solutions.tech` → 37.59.100.251**, puis `bash ~/mise-en-ligne.sh`
+      (voir `deploiement/DEPLOIEMENT.md`) – lien : `[À COMPLÉTER]`
 - [ ] Photos au sol de Curiosity pour les cibles (galerie des images brutes, sols 4643 et 4684)
 - [ ] Slide « Notre direction » (outil web + mode marche) – à ajouter si absente
+- [ ] Changer les codes d'accès de démonstration avant toute diffusion publique
 - [ ] Page projet **en anglais** sur spaceappschallenge.org + déclaration de l'usage de l'IA + liste des sources
 - [ ] Vidéo / slides de démo au format exigé par le guide 2026
 - [ ] (Bonus) démo terrestre avec NASA Worldview (forêt gabonaise)
@@ -210,5 +214,149 @@ bouton « ×1 / ×2 » pour régler le facteur de vitesse en direct devant le ju
 2. **Validé sur le terrain réel** : pente calibrée sur 73 mesures de Curiosity (écart 7,6° → 2,8°).
 3. **Le chemin le plus rapide ET sûr** : Dijkstra sur le temps de marche (Tobler), zones dangereuses exclues.
 4. **Données NASA** : HiRISE, DEM USGS-NASA, positions et radiations de Curiosity.
-5. **Une direction** : un outil web dans le rover + un mode marche ; même lien pour l'orbite et la Terre.
+5. **Une direction** : un outil web dans le rover + un mode marche ; même lien pour l'orbite et la Terre,
+   avec des droits différents selon le poste.
 6. **Hypothèses assumées et réglables** (vitesse en combinaison, seuils de pente).
+7. **Le relief est réel, pas illustré** : la vue 3D et la vision de l'astronaute sont construites sur le
+   modèle de terrain 1 m de l'USGS, texturé par HiRISE. Ce que voit l'astronaute dans la visière est
+   la vraie topographie du mont Sharp.
+8. **Un design argumenté, pas décoratif** : accent froid parce que le sol est rouille, chaud réservé aux
+   alertes, centre de la visière laissé libre pour la vision. Chaque choix se justifie en une phrase (§9.2).
+
+## 9. Le site `site/` — version 3 (15 nov., design DEVSEC)
+
+C'est le livrable montré au jury. `sortie/sortie/app.html` (§7) reste comme
+version de secours, sans dépendance au serveur.
+
+### 9.1 Organisation
+
+```
+site/
+  index.html              écran d'accès (poste + identifiant + code)
+  app.html                l'outil : carte 2D, terrain 3D, visière
+  assets/
+    css/martian.css       le système de design (tout y est commenté)
+    js/noyau.js           formats, géométrie Mars, session, sons, vibrations, liaison
+    js/auth.js            vérification du code (SHA-256), blocage après 5 échecs
+    js/carte2d.js         Leaflet, couches, profil en long, panneau de mission
+    js/terrain3d.js       three.js : relief réel, itinéraire, balises, deux caméras
+    js/hud.js             visière : bande de cap, minicarte inclinée, arrivée sur cible
+    js/app.js             orchestration, progression, droits par poste
+    fonts/                Space Grotesk, Inter, JetBrains Mono (servies localement)
+    vendor/               Leaflet 1.9.4, three.js r160 (aucun CDN)
+    img/                  logos détourés, image d'accueil, texture de la palette
+    data/                 mission.json + couches + terrain (copie de sortie/)
+deploiement/              vhost nginx, script de mise en ligne, DEPLOIEMENT.md
+```
+
+### 9.2 Les quatre règles du design (à citer au jury)
+
+1. **Verre gris.** Les panneaux sont des plaques translucides tirées de la
+   palette fournie (gris neutre #6E6F71 → #FFFFFF). L'instrument se pose sur
+   le terrain sans jamais l'effacer — comme une visière.
+2. **L'accent est froid.** Le sol de Gale est rouille ; un accent chaud s'y
+   noie. L'accent instrument est donc **cyan** : contraste maximal sur la
+   roche, et lecture immédiate de « ceci est une donnée, pas du paysage ».
+3. **Le chaud est réservé au danger.** Ambre = prudence, rouge = limite,
+   nulle part ailleurs. Dans une interface de sécurité, une couleur d'alerte
+   utilisée pour décorer est une faute.
+4. **Le centre est libre.** En mode marche, rien n'est posé au centre de
+   l'écran : c'est le champ de vision de l'astronaute.
+
+Toutes les couleurs sont des variables CSS en haut de `martian.css` : changer
+l'accent, c'est changer une ligne.
+
+### 9.3 Écran d'accès (`index.html`)
+
+Formulaire à gauche, imagerie réelle du site à droite (HiRISE recadré sur la
+boucle, l'itinéraire tracé dessus, texte minimal). Le **poste** choisi décide
+des droits :
+
+| Poste | Voit la carte | Conduit la marche | Émet des messages | Délai affiché |
+| --- | --- | --- | --- | --- |
+| Rover (surface) | oui | **oui** | oui | direct |
+| Orbite | oui | non | oui | direct |
+| Terre | oui | non | non (écoute) | 12 min |
+
+Identifiants de démonstration : `ged.rover` / `ARES-01`, `crew.orbite` /
+`ARES-02`, `sol.terre` / `ARES-03`. Les champs sont pré-remplis.
+**L'authentification est une maquette côté navigateur** — c'est écrit dans
+`deploiement/DEPLOIEMENT.md`, à assumer si le jury pose la question.
+
+L'insigne NASA n'est **pas** la marque du produit : il figure en bas de page
+comme **source de données**, avec la mention « projet indépendant DEVSEC, sans
+affiliation ni validation de la NASA ». C'est ce que demandent les règles du
+concours, et c'est plus défendable qu'un logo NASA en en-tête.
+
+### 9.4 Écran de planification
+
+Carte **plein écran** (cadrage « cover » : l'emprise remplit la fenêtre), les
+panneaux flottent dessus et se replient tous. Couches : optique HiRISE ou
+relief ombré en fond ; pentes, dangers, crêtes/creux, itinéraire, traces de
+Curiosity en superposition, avec un curseur d'opacité.
+
+Les PNG de couches ont été **redessinés** : on ne colore que ce qui contraint
+la marche (terrain praticable presque transparent, prudence en ambre léger,
+interdit en rouge dense avec un liseré sur la limite). Les chiffres sont
+identiques au pipeline : 40 % facile, 35 % prudence, 25 % interdit.
+
+Bouton **Terrain 3D** : le vrai modèle de terrain 1 m, 512 × 512, texturé par
+l'orthomosaïque HiRISE, avec l'itinéraire, les balises de cible et la position
+du marcheur. Souris : glisser pour tourner, molette pour zoomer.
+
+### 9.5 Mode marche (visière)
+
+Le fond n'est plus une carte : c'est le **terrain 3D vu depuis les yeux de
+l'astronaute** (1,72 m, caméra orientée sur le cap suivi). L'itinéraire y
+apparaît comme un sentier d'un mètre, jalonné de balises tous les 25 m,
+posées sur le côté du cheminement.
+
+Disposition : bande de cap en haut, bloc « prochain point / distance / temps »
+à gauche, « pente / retour habitat / dose / cap » à droite, minicarte inclinée
+façon jeu vidéo en bas à gauche, commandes de démonstration en bas à droite.
+Centre vide.
+
+**Arrivée sur une cible** : la marche s'arrête, une carte apparaît avec
+l'objectif scientifique et un chronomètre de relevé (20 min de temps mission,
+défilement accéléré ×60 pour la démo), son + vibration, et un message est
+émis automatiquement vers l'orbite. À la fin du relevé, la marche reprend.
+
+Clavier : `←` `→` avancer de 25 m, `espace` lecture/pause, `échap` revenir à
+la planification.
+
+### 9.6 Retours sensoriels
+
+Sons **de synthèse** (Web Audio, aucun fichier) avec un vocabulaire cohérent :
+montant = confirmation, battement grave = danger. Vibrations via
+`navigator.vibrate` (tablette, téléphone). **Coupables d'un clic** dans la
+barre haute — une interface qui bipe sans arrêt pendant un pitch est une
+interface ratée.
+
+### 9.7 Liaison surface ↔ orbite ↔ Terre
+
+`BroadcastChannel` + `localStorage` : aucun serveur. **Démonstration qui
+marche à tous les coups** : ouvrir deux fenêtres, se connecter en « Rover »
+dans l'une et en « Orbite » dans l'autre. Un message émis depuis l'orbite
+(« Hausse des radiations ») s'affiche en alerte rouge **dans la visière** du
+rover, avec son et vibration. Le rover répond, le message remonte.
+
+Limite assumée : c'est une liaison entre deux onglets du même navigateur, pas
+un vrai réseau. Le point démontré est l'**usage**, pas le transport.
+
+### 9.8 Vérifié / non vérifié
+
+**Vérifié dans Chrome** : accès et redirection sans session, les trois postes
+et leurs droits, les sept couches, le cadrage par étape, le terrain 3D, la
+vision première personne, l'arrivée sur cible avec chronomètre, la liaison
+entre deux onglets dans les deux sens, aucune erreur en console.
+
+**Non vérifié** : affichage sur mobile et tablette (les règles CSS existent,
+rien n'a été testé) ; Firefox et Safari ; le rendu 3D sur une machine sans
+accélération graphique (l'application bascule alors sur la carte 2D seule et
+masque le bouton 3D — le chemin de secours existe mais n'a pas été provoqué).
+
+### 9.9 Mise en ligne
+
+Tout est dans **`deploiement/DEPLOIEMENT.md`**. En résumé : le site (18 Mo)
+est déjà déposé sur le VPS dans `~/martian-map.nouveau`, rien de live n'a été
+touché. Il reste à pointer le DNS puis à lancer `bash ~/mise-en-ligne.sh`.
