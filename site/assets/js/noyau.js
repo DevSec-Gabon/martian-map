@@ -53,7 +53,7 @@
     rover:  {nom: 'Rover de surface', court: 'Rover',  lieu: 'Mont Sharp — rover pressurisé',
              droits: ['plan', 'marche', 'comms'], delai: 0},
     orbite: {nom: 'Relais en orbite', court: 'Orbite', lieu: 'Orbite basse de Mars',
-             droits: ['plan', 'comms'], delai: 0.02},
+             droits: ['plan', 'comms'], delai: 0},
     terre:  {nom: 'Centre de contrôle', court: 'Terre', lieu: 'Libreville — centre de contrôle',
              droits: ['plan'], delai: 12}
   };

@@ -187,17 +187,24 @@ export function creerTerrain(toile, options) {
     // jalons : petits piquets plantés le long du trajet
     var geoP = new THREE.CylinderGeometry(0.055, 0.055, 1.25, 6);
     var matP = new THREE.MeshBasicMaterial({color: 0x9BE9F6, transparent: true, opacity: .75});
-    var geoT = new THREE.SphereGeometry(0.17, 8, 6);
+    var geoT = new THREE.SphereGeometry(0.13, 8, 6);
     var matT = new THREE.MeshBasicMaterial({color: 0x2FD0E6});
+    // Les jalons sont plantés 1,3 m SUR LE CÔTÉ du cheminement : on ne marche
+    // pas dedans, et on ne les a jamais collés à l'objectif.
     var D = IT.distance_cum_m, prochain = 0;
     for (var i = 0; i < ptsRoute.length; i++) {
       if (D[i] < prochain) continue;
       prochain = D[i] + 25;
       var p = ptsRoute[i];
+      var av = ptsRoute[Math.min(i + 2, ptsRoute.length - 1)];
+      var ar = ptsRoute[Math.max(i - 2, 0)];
+      var tx = av.x - ar.x, tz = av.z - ar.z;
+      var n = Math.hypot(tx, tz) || 1;
+      var ox = (tz / n) * 1.3, oz = (-tx / n) * 1.3;
       var piquet = new THREE.Mesh(geoP, matP);
-      piquet.position.set(p.x, p.y + 0.62, p.z);
+      piquet.position.set(p.x + ox, p.y + 0.62, p.z + oz);
       var tete = new THREE.Mesh(geoT, matT);
-      tete.position.set(p.x, p.y + 1.3, p.z);
+      tete.position.set(p.x + ox, p.y + 1.3, p.z + oz);
       gVisiere.add(piquet); gVisiere.add(tete);
     }
     gVisiere.visible = false;
@@ -221,6 +228,8 @@ export function creerTerrain(toile, options) {
     anneau.position.set(p.x, y + 0.6, p.z);
     g.add(faisceau); g.add(anneau);
     g.userData.anneau = anneau;
+    g.userData.faisceau = faisceau;
+    g.userData.lonlat = [lon, lat];
     return g;
   }
 
@@ -292,9 +301,20 @@ export function creerTerrain(toile, options) {
     if (!pret || !visible) return;
     var t = performance.now() / 1000;
     balises.forEach(function (b, i) {
-      var a = b.userData.anneau;
-      a.scale.setScalar(1 + Math.sin(t * 1.6 + i) * 0.11);
-      a.material.opacity = .6 + Math.sin(t * 1.6 + i) * .25;
+      var a = b.userData.anneau, f = b.userData.faisceau;
+      var battement = Math.sin(t * 1.6 + i);
+      a.scale.setScalar(1 + battement * 0.11);
+
+      var proche = 1;
+      if (mode === 'visiere' && dernier) {
+        var d = Math.hypot(
+          (dernier.lon - b.userData.lonlat[0]) * RAD * R_MARS * Math.cos(dernier.lat * RAD),
+          (dernier.lat - b.userData.lonlat[1]) * RAD * R_MARS);
+        proche = Math.min(Math.max((d - 14) / 26, 0), 1);   // effacement sous 40 m
+      }
+      a.material.opacity = (.6 + battement * .25) * proche;
+      f.material.opacity = .38 * proche;
+      a.visible = f.visible = proche > 0.02;
     });
     if (mode === 'orbite') orbite.theta += 0.00035;          // dérive très lente
     majCamera(dernier);
